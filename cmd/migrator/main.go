@@ -12,6 +12,7 @@ import (
 )
 
 func main() {
+	//go run main.go --user=postgres --password=secret --host=localhost --port=5432 --dbname=mydb --migrations-path=./migrations
 	var (
 		user, password, host, port, dbname, migrationsPath, migrationsTable string
 	)
