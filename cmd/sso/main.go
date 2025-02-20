@@ -1,7 +1,9 @@
 package main
 
 import (
+	"authorization_service/internal/app"
 	"authorization_service/internal/config"
+	"context"
 	"log/slog"
 	"os"
 )
@@ -20,10 +22,11 @@ func main() {
 	log := setupLogger(cfg.Env)
 
 	// TODO: инициализировать приложение (app)
-	app :=
+	ctx := context.Background()
+	application := app.New(ctx, log, cfg.GRPC.Port, cfg.StoragePath, cfg.TokenTTL)
 
 	// TODO: запустить gRPC-сервер приложения
-	grpc :=
+	application.GRPCServer.MustRun()
 }
 
 func setupLogger(env string) *slog.Logger {
