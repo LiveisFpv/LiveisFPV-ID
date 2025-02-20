@@ -1,6 +1,8 @@
 package auth
 
 import (
+	"authorization_service/internal/services/auth"
+	"authorization_service/internal/storage"
 	"context"
 	"errors"
 
