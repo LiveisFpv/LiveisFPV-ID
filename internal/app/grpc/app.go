@@ -1,6 +1,7 @@
 package grpcapp
 
 import (
+	authgrpc "authorization_service/internal/grpc/auth"
 	"context"
 	"fmt"
 	"log/slog"
@@ -10,7 +11,7 @@ import (
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/recovery"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/internal/status"
+	"google.golang.org/grpc/status"
 )
 
 type App struct {
@@ -85,4 +86,14 @@ func (a *App) Run() error {
 	}
 
 	return nil
+}
+
+// Stop gRPC server
+func (a *App) Stop() {
+	const op = "grpcapp.Stop"
+
+	a.log.With(slog.String("op", op)).
+		Info("stopping gRPC server", slog.Int("port", a.port))
+
+	a.gRPCServer.GracefulStop()
 }

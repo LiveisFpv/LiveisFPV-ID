@@ -4,6 +4,7 @@ import (
 	"context"
 
 	ssov1 "github.com/LiveisFPV/sso_v1/gen/go/sso"
+	"google.golang.org/grpc"
 )
 
 type serverAPI struct {
@@ -24,4 +25,8 @@ type Auth interface {
 		email string,
 		password string,
 	) (userID int64, err error)
+}
+
+func Register(gRPCServer *grpc.Server, auth Auth) {
+	ssov1.RegisterAuthServer(gRPCServer, &serverAPI{auth: auth})
 }

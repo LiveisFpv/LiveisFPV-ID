@@ -6,6 +6,8 @@ import (
 	"context"
 	"log/slog"
 	"os"
+	"os/signal"
+	"syscall"
 )
 
 const (
@@ -26,7 +28,21 @@ func main() {
 	application := app.New(ctx, log, cfg.GRPC.Port, cfg.StoragePath, cfg.TokenTTL)
 
 	// TODO: запустить gRPC-сервер приложения
-	application.GRPCServer.MustRun()
+	go func() {
+		application.GRPCServer.MustRun()
+	}()
+
+	// Graceful shutdown
+
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, syscall.SIGTERM, syscall.SIGINT)
+
+	// Waiting for SIGINT (pkill -2) or SIGTERM
+	<-stop
+
+	// initiate graceful shutdown
+	application.GRPCServer.Stop() // Assuming GRPCServer has Stop() method for graceful shutdown
+	log.Info("Gracefully stopped")
 }
 
 func setupLogger(env string) *slog.Logger {

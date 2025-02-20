@@ -4,11 +4,12 @@ go 1.24.0
 
 require (
 	github.com/LiveisFPV/sso_v1 v0.0.0-20250220075905-fc712ee23d07
+	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.3.0
 	github.com/ilyakaznacheev/cleanenv v1.5.0
+	google.golang.org/grpc v1.70.0
 )
 
 require (
-	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.3.0 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
@@ -21,7 +22,6 @@ require (
 	golang.org/x/sys v0.30.0 // indirect
 	golang.org/x/text v0.22.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20241202173237-19429a94021a // indirect
-	google.golang.org/grpc v1.70.0 // indirect
 	google.golang.org/protobuf v1.36.5 // indirect
 )
 

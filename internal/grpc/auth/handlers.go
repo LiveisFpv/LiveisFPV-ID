@@ -8,7 +8,7 @@ import (
 
 	ssov1 "github.com/LiveisFPV/sso_v1/gen/go/sso"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/internal/status"
+	"google.golang.org/grpc/status"
 )
 
 func (s *serverAPI) Login(
