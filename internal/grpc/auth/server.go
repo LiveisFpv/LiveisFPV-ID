@@ -25,16 +25,3 @@ type Auth interface {
 		password string,
 	) (userID int64, err error)
 }
-
-func (s *serverAPI) Login(
-	ctx context.Context,
-	in *ssov1.LoginRequest,
-) (*ssov1.LoginResponse, error) {
-	return nil, nil
-}
-func (s *serverAPI) Register(
-	ctx context.Context,
-	in *ssov1.RegisterRequest,
-) (*ssov1.RegisterResponse, error) {
-	return nil, nil
-}
