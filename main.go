@@ -43,6 +43,8 @@ func main() {
 	// initiate graceful shutdown
 	application.GRPCServer.Stop() // Assuming GRPCServer has Stop() method for graceful shutdown
 	log.Info("Gracefully stopped")
+	application.AuthService.Stop()
+	log.Info("AuthService stopped")
 }
 
 func setupLogger(env string) *slog.Logger {

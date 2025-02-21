@@ -30,6 +30,7 @@ type Repository interface {
 	SaveUser(ctx context.Context, email string, passHash []byte) (int64, error)
 	User(ctx context.Context, email string) (models.User, error)
 	App(ctx context.Context, id int) (models.App, error)
+	Stop()
 }
 
 func NewStorage(ctx context.Context, dsn string, log *slog.Logger) (Repository, error) {
@@ -45,4 +46,8 @@ func NewStorage(ctx context.Context, dsn string, log *slog.Logger) (Repository, 
 	}
 
 	return NewRepository(pool, log), nil
+}
+
+func (r *repo) Stop() {
+	r.Queries.Stop()
 }

@@ -10,7 +10,8 @@ import (
 )
 
 type App struct {
-	GRPCServer *grpcapp.App
+	GRPCServer  *grpcapp.App
+	AuthService *auth.Auth
 }
 
 func New(
@@ -30,6 +31,7 @@ func New(
 	grpcApp := grpcapp.New(log, authService, grpcPort)
 
 	return &App{
-		GRPCServer: grpcApp,
+		GRPCServer:  grpcApp,
+		AuthService: authService,
 	}
 }

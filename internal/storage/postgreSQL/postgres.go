@@ -9,3 +9,7 @@ type Queries struct {
 func New(pgxpool *pgxpool.Pool) *Queries {
 	return &Queries{pool: pgxpool}
 }
+func (q *Queries) Stop() {
+
+	q.pool.Close()
+}
