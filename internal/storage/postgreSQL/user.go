@@ -13,14 +13,14 @@ func (q *Queries) SaveUser(ctx context.Context, email string, passHash []byte) (
 	const op = "storage.postgreSQL.SaveUser"
 	sql_context := "INSERT INTO users(email, pass_hash) VALUES($1, $2) Returning id"
 	row := q.pool.QueryRow(ctx, sql_context, email, passHash)
-	var id int64
-	err := row.Scan(id)
+	var id int
+	err := row.Scan(&id)
 
 	if err != nil {
 		return 0, fmt.Errorf("%s: %w", op, err)
 	}
 
-	return id, nil
+	return int64(id), nil
 }
 
 func (q *Queries) User(ctx context.Context, email string) (models.User, error) {
