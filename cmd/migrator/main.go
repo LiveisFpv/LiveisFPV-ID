@@ -41,7 +41,7 @@ func main() {
 	)
 
 	//Создаем объект мигратора
-	m, err := migrate.New("file://"+migrationsPath, dsn)
+	m, err := migrate.New("file:"+migrationsPath, dsn)
 	if err != nil {
 		panic(fmt.Sprintf("Migration init failed: %v", err))
 	}
