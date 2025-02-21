@@ -1,0 +1,11 @@
+services:
+  backend:
+    container_name: AuthService
+    build:
+      context: .
+      dockerfile: dockerfile
+    ports:
+      - "15432:15432"
+    environment:
+      - CONFIG_PATH=congig/config_local.yaml
+      

@@ -25,7 +25,7 @@ func main() {
 
 	// TODO: инициализировать приложение (app)
 	ctx := context.Background()
-	application := app.New(ctx, log, cfg.GRPC.Port, cfg.StoragePath, cfg.TokenTTL)
+	application := app.New(ctx, log, cfg.GRPC.Port, cfg.Dsn, cfg.TokenTTL)
 
 	// TODO: запустить gRPC-сервер приложения
 	go func() {
@@ -43,7 +43,7 @@ func main() {
 	// initiate graceful shutdown
 	application.GRPCServer.Stop() // Assuming GRPCServer has Stop() method for graceful shutdown
 	log.Info("Gracefully stopped")
-	application.AuthService.Stop()
+	application.Storage.Stop()
 	log.Info("AuthService stopped")
 }
 

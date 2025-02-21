@@ -20,12 +20,10 @@ type UserStorage interface {
 		passHash []byte,
 	) (uid int64, err error)
 	User(ctx context.Context, email string) (models.User, error)
-	Stop()
 }
 
 type AppProvider interface {
 	App(ctx context.Context, appID int) (models.App, error)
-	Stop()
 }
 
 type Auth struct {
@@ -131,13 +129,4 @@ func (a *Auth) Login(
 	}
 
 	return token, nil
-}
-
-func (a *Auth) Stop() {
-	const op = "AuthService.Stop"
-
-	a.log.With(slog.String("op", op)).
-		Info("stopping AuthService")
-	a.appProvider.Stop()
-	a.userStorage.Stop()
 }
