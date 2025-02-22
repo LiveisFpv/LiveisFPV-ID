@@ -11,9 +11,15 @@
             "request": "launch",
             "mode": "debug",
             "program": "${fileDirname}",
-            "args": ["-config","./config/config_local.yaml"],
+            "args": ["-config","./config/config_local.yml"],
             "env": {
-                "CONFIG_PATH": "./config/config_local.yaml"
+                "DB_HOST": "db",
+                "DB_PORT": "5432",
+                "DB_USER": "postgres",
+                "DB_PASSWORD": "0000",
+                "DB_NAME": "grpc_auth_db",
+                "GRPC_PORT": "15432",
+                "GRPC_TIMEOUT": "24h",
             }
         }
     ]

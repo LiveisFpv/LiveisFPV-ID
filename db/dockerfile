@@ -1,0 +1,9 @@
+FROM golang:1.24
+
+WORKDIR /db
+
+COPY . .
+
+RUN go mod download
+
+CMD [ "./migrate.sh" ]

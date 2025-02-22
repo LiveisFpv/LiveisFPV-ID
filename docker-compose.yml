@@ -2,10 +2,47 @@ services:
   backend:
     container_name: AuthService
     build:
-      context: .
+      context: ./authorization_service
       dockerfile: dockerfile
     ports:
       - "15432:15432"
     environment:
-      - CONFIG_PATH=congig/config_local.yaml
-      
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=0000
+      - DB_NAME=grpc_auth_db
+      - GRPC_PORT=15432
+      - GRPC_TIMEOUT=24h
+    depends_on:
+      - db
+      - migrator
+  
+  db:
+    container_name: postgres_db
+    image: postgres:17
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=0000
+      - POSTGRES_DB=grpc_auth_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+  migrator:
+    build:
+      context: ./db
+      dockerfile: dockerfile
+    environment:
+      - DB_USER=postgres
+      - DB_PASSWORD=0000
+      - DB_NAME=grpc_auth_db
+      - DB_PORT=5432
+      - DB_HOST=db
+    depends_on:
+      - db
+    
+
+volumes:
+  db_data:
