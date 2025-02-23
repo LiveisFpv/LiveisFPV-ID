@@ -15,8 +15,11 @@ services:
       - GRPC_PORT=15432
       - GRPC_TIMEOUT=24h
     depends_on:
-      - db
-      - migrator
+      db:
+        condition: service_healthy
+      migrator:
+        condition: service_completed_successfully
+        
   
   db:
     container_name: postgres_db
@@ -29,6 +32,10 @@ services:
       - "5432:5432"
     volumes:
       - db_data:/var/lib/postgresql/data
+    healthcheck:  # Ждем, пока БД будет готова
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 5s
+      retries: 5
 
   migrator:
     build:

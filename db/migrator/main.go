@@ -14,7 +14,7 @@ import (
 func main() {
 	//go run main.go --user=postgres --password=secret --host=localhost --port=5432 --dbname=mydb --migrations-path=./migrations
 	var (
-		user, password, host, port, dbname, migrationsPath, migrationsTable string
+		user, password, host, port, dbname, migrationsPath string
 	)
 
 	// Параметры подключения к БД
@@ -24,7 +24,6 @@ func main() {
 	flag.StringVar(&port, "port", "5432", "PostgreSQL port")
 	flag.StringVar(&dbname, "dbname", "", "PostgreSQL database name")
 	flag.StringVar(&migrationsPath, "migrations-path", "", "Path to migration files")
-	flag.StringVar(&migrationsTable, "migrations-table", "migrations", "Migrations table name")
 	flag.Parse()
 
 	// Валидация параметров
