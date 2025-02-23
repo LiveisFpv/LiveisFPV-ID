@@ -1,5 +1,5 @@
 services:
-  backend:
+  auth_service:
     container_name: AuthService
     build:
       context: ./authorization_service
@@ -19,6 +19,9 @@ services:
         condition: service_healthy
       migrator:
         condition: service_completed_successfully
+    networks:
+      - grpc_network
+      - db_network
         
   
   db:
@@ -36,8 +39,11 @@ services:
       test: ["CMD", "pg_isready", "-U", "postgres"]
       interval: 5s
       retries: 5
+    networks:
+      - db_network
 
   migrator:
+    container_name: migrator
     build:
       context: ./db
       dockerfile: dockerfile
@@ -49,7 +55,17 @@ services:
       - DB_HOST=db
     depends_on:
       - db
+    networks:
+      - db_network
     
 
 volumes:
   db_data:
+
+# Before start create a network with command
+# docker network create grpc_network
+networks:
+  grpc_network:
+    external: true
+  db_network:
+    driver: bridge
