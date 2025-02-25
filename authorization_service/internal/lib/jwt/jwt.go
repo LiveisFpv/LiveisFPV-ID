@@ -9,14 +9,15 @@ import (
 
 // Creates new JWT token for given user, app
 func NewToken(user models.User, app models.App, duration time.Duration) (string, error) {
-	token := jwt.New(jwt.SigningMethodHS256)
-
 	//Add information to token
-	claims := token.Claims.(jwt.MapClaims)
-	claims["uid"] = user.ID
-	claims["email"] = user.Email
-	claims["exp"] = time.Now().Add(duration).Unix()
-	claims["app_id"] = app.ID
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256,
+		jwt.MapClaims{
+			"uid":    user.ID,
+			"email":  user.Email,
+			"exp":    time.Now().Add(time.Hour * 24).Unix(), //!Есть проблема с парсом времени токен сразу протухает
+			"app_id": app.ID,
+		},
+	)
 
 	tokenString, err := token.SignedString([]byte(app.Secret))
 	if err != nil {
