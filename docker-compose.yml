@@ -31,8 +31,6 @@ services:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=0000
       - POSTGRES_DB=grpc_auth_db
-    ports:
-      - "5432:5432"
     volumes:
       - db_data:/var/lib/postgresql/data
     healthcheck:  # Ждем, пока БД будет готова
