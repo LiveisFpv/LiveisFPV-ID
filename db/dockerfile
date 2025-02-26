@@ -6,4 +6,4 @@ COPY . .
 
 RUN go mod download
 
-ENTRYPOINT ["./migrate.sh" ]
+ENTRYPOINT ["/bin/sh", "-c", "./migrate.sh"]
