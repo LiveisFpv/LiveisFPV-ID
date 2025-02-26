@@ -4,6 +4,8 @@ WORKDIR /db
 
 COPY . .
 
+RUN chmod +x /db/migrate.sh
+
 RUN go mod download
 
-ENTRYPOINT ["/bin/sh", "-c", "./migrate.sh"]
+ENTRYPOINT ["/bin/sh", "-c", "/db/migrate.sh"]
