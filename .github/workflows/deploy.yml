@@ -25,9 +25,9 @@ jobs:
           ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
             cd ~/authorization_service
             git pull origin main
-            docker system prune -af  # Удаляет неиспользуемые контейнеры, образы, сети и кэш
-            docker volume prune -f    # Удаляет неиспользуемые volume'ы (если их не нужно сохранять)
             docker compose build
             docker compose down
             docker compose up -d
+            docker system prune -af  # Удаляет неиспользуемые контейнеры, образы, сети и кэш
+            docker volume prune -f    # Удаляет неиспользуемые volume'ы (если их не нужно сохранять)
           EOF
