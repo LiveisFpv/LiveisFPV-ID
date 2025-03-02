@@ -3,14 +3,13 @@ package auth
 import (
 	"authorization_service/internal/domain/models"
 	"authorization_service/internal/lib/jwt"
-	"authorization_service/internal/lib/logger/sl"
 	"authorization_service/internal/storage"
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 	"time"
 
+	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -27,14 +26,14 @@ type AppProvider interface {
 }
 
 type Auth struct {
-	log         *slog.Logger
+	log         *logrus.Logger
 	userStorage UserStorage
 	appProvider AppProvider
 	tokenTTL    time.Duration
 }
 
 func New(
-	log *slog.Logger,
+	log *logrus.Logger,
 	userStorage UserStorage,
 	appProvider AppProvider,
 	tokenTTL time.Duration,
@@ -51,9 +50,11 @@ func (a *Auth) RegisterNewUser(ctx context.Context, email string, password strin
 	const op = "Auth.RegisterNewUser"
 
 	//logging information without password
-	log := a.log.With(
-		slog.String("op", op),
-		slog.String("email", email),
+	log := a.log.WithFields(
+		logrus.Fields{
+			"op":    op,
+			"email": email,
+		},
 	)
 
 	log.Info("registering user")
@@ -61,14 +62,14 @@ func (a *Auth) RegisterNewUser(ctx context.Context, email string, password strin
 	//Generate salt and hash for password
 	passHash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
-		log.Error("failed to generate password hash", sl.Err(err))
+		log.Error("failed to generate password hash", err)
 		return 0, fmt.Errorf("%s: %w", op, err)
 	}
 
 	//Save user to database
 	id, err := a.userStorage.SaveUser(ctx, email, passHash)
 	if err != nil {
-		log.Error("failed ti save user", sl.Err(err))
+		log.Error("failed ti save user", err)
 		return 0, fmt.Errorf("%s: %w", op, err)
 	}
 	return id, nil
@@ -86,9 +87,11 @@ func (a *Auth) Login(
 ) (string, error) {
 	const op = "Auth.Login"
 
-	log := a.log.With(
-		slog.String("op", op),
-		slog.String("username", email),
+	log := a.log.WithFields(
+		logrus.Fields{
+			"op":    op,
+			"email": email,
+		},
 	)
 
 	log.Info("attempting ti login user")
@@ -96,18 +99,18 @@ func (a *Auth) Login(
 	user, err := a.userStorage.User(ctx, email)
 	if err != nil {
 		if errors.Is(err, storage.ErrUserNotFound) {
-			a.log.Warn("user not found", sl.Err(err))
+			a.log.Warn("user not found", err)
 
 			return "", fmt.Errorf("%s: %w", op, ErrInvalidCredentials)
 		}
 
-		a.log.Error("failed to get user", sl.Err(err))
+		a.log.Error("failed to get user", err)
 
 		return "", fmt.Errorf("%s: %w", op, err)
 	}
 	// Проверяем корректность полученного пароля
 	if err := bcrypt.CompareHashAndPassword(user.PassHash, []byte(password)); err != nil {
-		a.log.Info("invalid credentials", sl.Err(err))
+		a.log.Info("invalid credentials", err)
 
 		return "", fmt.Errorf("%s: %w", op, ErrInvalidCredentials)
 	}
@@ -123,7 +126,7 @@ func (a *Auth) Login(
 	// Создаём токен авторизации
 	token, err := jwt.NewToken(user, app, a.tokenTTL)
 	if err != nil {
-		a.log.Error("failed to generate token", sl.Err(err))
+		a.log.Error("failed to generate token", err)
 
 		return "", fmt.Errorf("%s: %w", op, err)
 	}

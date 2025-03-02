@@ -4,20 +4,20 @@ import (
 	"authorization_service/internal/domain/models"
 	"context"
 	"fmt"
-	"log/slog"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/sirupsen/logrus"
 )
 
 type repo struct {
 	*Queries
 	pool *pgxpool.Pool
-	log  *slog.Logger
+	log  *logrus.Logger
 }
 
 func NewRepository(
 	pgxpool *pgxpool.Pool,
-	log *slog.Logger,
+	log *logrus.Logger,
 ) Repository {
 	return &repo{
 		Queries: New(pgxpool),
@@ -33,7 +33,7 @@ type Repository interface {
 	Stop()
 }
 
-func NewStorage(ctx context.Context, dsn string, log *slog.Logger) (Repository, error) {
+func NewStorage(ctx context.Context, dsn string, log *logrus.Logger) (Repository, error) {
 	pool, err := pgxpool.New(ctx, dsn)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to database: %w", err)

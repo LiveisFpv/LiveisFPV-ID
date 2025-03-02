@@ -5,8 +5,9 @@ import (
 	"authorization_service/internal/services/auth"
 	postgresql "authorization_service/internal/storage/postgreSQL"
 	"context"
-	"log/slog"
 	"time"
+
+	"github.com/sirupsen/logrus"
 )
 
 type App struct {
@@ -16,7 +17,7 @@ type App struct {
 
 func New(
 	ctx context.Context,
-	log *slog.Logger,
+	log *logrus.Logger,
 	grpcPort int,
 	dsn string,
 	tokenTTL time.Duration,

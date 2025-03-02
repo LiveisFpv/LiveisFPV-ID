@@ -31,6 +31,7 @@ require (
 	github.com/golang-migrate/migrate/v4 v4.18.2
 	github.com/jackc/pgx/v5 v5.7.2
 	github.com/joho/godotenv v1.5.1 // indirect
+	github.com/sirupsen/logrus v1.9.3
 	golang.org/x/crypto v0.33.0
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	olympos.io/encoding/edn v0.0.0-20201019073823-d3554ca0b0a3 // indirect

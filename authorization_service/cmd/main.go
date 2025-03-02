@@ -4,16 +4,11 @@ import (
 	"authorization_service/internal/app"
 	"authorization_service/internal/config"
 	"context"
-	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
-)
 
-const (
-	envLocal = "local"
-	envDev   = "dev"
-	envProd  = "prod"
+	"github.com/sirupsen/logrus"
 )
 
 func main() {
@@ -21,12 +16,13 @@ func main() {
 	cfg := config.MustLoad()
 
 	// TODO: инициализировать логгер
-	log := setupLogger(cfg.Env)
+	log := setupLogger()
 
 	// TODO: инициализировать приложение (app)
 	ctx := context.Background()
 	application := app.New(ctx, log, cfg.GRPC.Port, cfg.Dsn, cfg.TokenTTL)
 
+	log.Info("Start service")
 	// TODO: запустить gRPC-сервер приложения
 	go func() {
 		application.GRPCServer.MustRun()
@@ -44,28 +40,11 @@ func main() {
 	application.GRPCServer.Stop() // Assuming GRPCServer has Stop() method for graceful shutdown
 	log.Info("Gracefully stopped")
 	application.Storage.Stop()
-	log.Info("AuthService stopped")
+	log.Info("Postgres connection closed")
 }
 
-func setupLogger(env string) *slog.Logger {
-	var log *slog.Logger
-	//Chose env for loger
-	switch env {
-	case envLocal:
-		//for local start
-		log = slog.New(
-			slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}),
-		)
-	case envDev:
-		//On dev server
-		log = slog.New(
-			slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}),
-		)
-	case envProd:
-		//For production only Info logs
-		log = slog.New(
-			slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}),
-		)
-	}
+func setupLogger() *logrus.Logger {
+	log := logrus.New()
+	log.SetFormatter(&logrus.JSONFormatter{})
 	return log
 }

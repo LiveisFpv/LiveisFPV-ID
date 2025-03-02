@@ -4,11 +4,11 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"log/slog"
 
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
+	"github.com/sirupsen/logrus"
 )
 
 func main() {
@@ -50,10 +50,10 @@ func main() {
 
 	if err != nil {
 		if errors.Is(err, migrate.ErrNoChange) {
-			slog.Info("No migrations to apply")
+			logrus.Info("No migrations to apply")
 			return
 		}
 		panic(fmt.Sprintf("Migration failed: %v", err))
 	}
-	slog.Info("Migrations applied successfully")
+	logrus.Info("Migrations applied successfully")
 }
