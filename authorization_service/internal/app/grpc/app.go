@@ -37,7 +37,22 @@ func InterceptorLogger(l *logrus.Logger) grpclog.Logger {
 			logrusLevel = logrus.InfoLevel
 		}
 
-		l.WithFields(logrus.Fields{"details": fields}).Log(logrusLevel, msg)
+		// Преобразование поля `fields` в структуру с ключами
+		logFields := make(map[string]any)
+		for i := 0; i < len(fields); i += 2 {
+			if i+1 < len(fields) {
+				key, ok := fields[i].(string)
+				if !ok {
+					key = "unknown"
+				}
+				logFields[key] = fields[i+1]
+			}
+		}
+
+		// Логирование с полями
+		l.WithFields(logrus.Fields{
+			"details": logFields,
+		}).Log(logrusLevel, msg)
 	})
 }
 

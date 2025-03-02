@@ -3,12 +3,11 @@ package main
 import (
 	"authorization_service/internal/app"
 	"authorization_service/internal/config"
+	"authorization_service/internal/lib/logger"
 	"context"
 	"os"
 	"os/signal"
 	"syscall"
-
-	"github.com/sirupsen/logrus"
 )
 
 func main() {
@@ -16,7 +15,7 @@ func main() {
 	cfg := config.MustLoad()
 
 	// TODO: инициализировать логгер
-	log := setupLogger()
+	log := logger.LoggerSetup(true)
 
 	// TODO: инициализировать приложение (app)
 	ctx := context.Background()
@@ -41,10 +40,4 @@ func main() {
 	log.Info("Gracefully stopped")
 	application.Storage.Stop()
 	log.Info("Postgres connection closed")
-}
-
-func setupLogger() *logrus.Logger {
-	log := logrus.New()
-	log.SetFormatter(&logrus.JSONFormatter{})
-	return log
 }
