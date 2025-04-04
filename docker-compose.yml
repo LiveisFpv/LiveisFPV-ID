@@ -2,10 +2,11 @@ services:
   auth_service:
     container_name: AuthService
     build:
-      context: ./authorization_service
-      dockerfile: dockerfile
+      context: .
+      dockerfile: authorization_service/dockerfile
     ports:
       - "15432:15432"
+      # - "40001:40001"
     environment:
       - DB_HOST=db
       - DB_PORT=5432

@@ -18,7 +18,7 @@ func (s *serverAPI) Login(
 	if in.Email == "" {
 		return nil, status.Error(codes.InvalidArgument, "email is required")
 	}
-	if in.Password == nil || in.YandexToken == nil {
+	if in.Password == nil && in.YandexToken == nil {
 		return nil, status.Error(codes.InvalidArgument, "password or token is required")
 	}
 	if in.GetAppId() == 0 {
@@ -42,7 +42,7 @@ func (s *serverAPI) Register(
 	if in.Email == "" {
 		return nil, status.Error(codes.InvalidArgument, "email is required")
 	}
-	if in.Password == nil || in.YandexToken == nil {
+	if in.Password == nil && in.YandexToken == nil {
 		return nil, status.Error(codes.InvalidArgument, "password or token is required")
 	}
 	uid, err := s.auth.RegisterNewUser(ctx, in.GetEmail(), in.GetPassword(), in.GetYandexToken())

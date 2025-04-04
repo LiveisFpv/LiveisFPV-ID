@@ -25,7 +25,7 @@ func (q *Queries) SaveUser(ctx context.Context, email string, passHash []byte, y
 
 func (q *Queries) User(ctx context.Context, email string) (models.User, error) {
 	const op = "storage.postgreSQL.User"
-	sql_context := "SELECT id, email, pass_hash FROM users WHERE email = $1"
+	sql_context := "SELECT id, email, pass_hash, yandex_token FROM users WHERE email = $1"
 
 	row := q.pool.QueryRow(ctx, sql_context, email)
 
