@@ -3,7 +3,7 @@ module authorization_service
 go 1.24.0
 
 require (
-	github.com/LiveisFPV/sso_v1 v0.0.0-20250220075905-fc712ee23d07
+	github.com/LiveisFPV/sso_v1 v0.1.1
 	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.3.0
 	github.com/ilyakaznacheev/cleanenv v1.5.0
 	google.golang.org/grpc v1.70.0

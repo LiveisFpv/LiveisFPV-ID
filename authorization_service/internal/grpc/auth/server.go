@@ -19,11 +19,13 @@ type Auth interface {
 		email string,
 		password string,
 		appID int,
+		yandex_token string,
 	) (token string, err error)
 	RegisterNewUser(
 		ctx context.Context,
 		email string,
 		password string,
+		yandex_token string,
 	) (userID int64, err error)
 }
 

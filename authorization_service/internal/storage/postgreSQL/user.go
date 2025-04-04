@@ -9,10 +9,10 @@ import (
 	"fmt"
 )
 
-func (q *Queries) SaveUser(ctx context.Context, email string, passHash []byte) (int64, error) {
+func (q *Queries) SaveUser(ctx context.Context, email string, passHash []byte, yandex_token []byte) (int64, error) {
 	const op = "storage.postgreSQL.SaveUser"
-	sql_context := "INSERT INTO users(email, pass_hash) VALUES($1, $2) Returning id"
-	row := q.pool.QueryRow(ctx, sql_context, email, passHash)
+	sql_context := "INSERT INTO users(email, pass_hash, yandex_token) VALUES($1, $2, $3) Returning id"
+	row := q.pool.QueryRow(ctx, sql_context, email, passHash, yandex_token)
 	var id int
 	err := row.Scan(&id)
 
@@ -34,6 +34,7 @@ func (q *Queries) User(ctx context.Context, email string) (models.User, error) {
 		&user.ID,
 		&user.Email,
 		&user.PassHash,
+		&user.Yandex_token,
 	)
 
 	if err != nil {

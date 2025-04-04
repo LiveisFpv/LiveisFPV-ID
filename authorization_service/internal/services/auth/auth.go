@@ -17,6 +17,7 @@ type UserStorage interface {
 	SaveUser(ctx context.Context,
 		email string,
 		passHash []byte,
+		yandex_token []byte,
 	) (uid int64, err error)
 	User(ctx context.Context, email string) (models.User, error)
 }
@@ -46,7 +47,7 @@ func New(
 	}
 }
 
-func (a *Auth) RegisterNewUser(ctx context.Context, email string, password string) (int64, error) {
+func (a *Auth) RegisterNewUser(ctx context.Context, email string, password string, yandex_token string) (int64, error) {
 	const op = "Auth.RegisterNewUser"
 
 	//logging information without password
@@ -60,6 +61,9 @@ func (a *Auth) RegisterNewUser(ctx context.Context, email string, password strin
 	log.Info("registering user")
 
 	//Generate salt and hash for password
+	if password == "" {
+		password = yandex_token
+	}
 	passHash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		log.Error("failed to generate password hash", err)
@@ -67,7 +71,7 @@ func (a *Auth) RegisterNewUser(ctx context.Context, email string, password strin
 	}
 
 	//Save user to database
-	id, err := a.userStorage.SaveUser(ctx, email, passHash)
+	id, err := a.userStorage.SaveUser(ctx, email, passHash, []byte(yandex_token))
 	if err != nil {
 		log.Error("failed ti save user", err)
 		return 0, fmt.Errorf("%s: %w", op, err)
@@ -84,6 +88,8 @@ func (a *Auth) Login(
 	email string,
 	password string,
 	appID int,
+	yandex_token string,
+
 ) (string, error) {
 	const op = "Auth.Login"
 
@@ -108,10 +114,17 @@ func (a *Auth) Login(
 
 		return "", fmt.Errorf("%s: %w", op, err)
 	}
-	// Проверяем корректность полученного пароля
-	if err := bcrypt.CompareHashAndPassword(user.PassHash, []byte(password)); err != nil {
-		a.log.Info("invalid credentials", err)
+	if yandex_token == "" {
+		// Проверяем корректность полученного пароля
+		if err := bcrypt.CompareHashAndPassword(user.PassHash, []byte(password)); err != nil {
+			a.log.Info("invalid credentials", err)
 
+			return "", fmt.Errorf("%s: %w", op, ErrInvalidCredentials)
+		}
+	} else {
+		if yandex_token != string(user.Yandex_token) {
+			a.log.Info("Invalid token")
+		}
 		return "", fmt.Errorf("%s: %w", op, ErrInvalidCredentials)
 	}
 

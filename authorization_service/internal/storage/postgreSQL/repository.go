@@ -27,7 +27,7 @@ func NewRepository(
 }
 
 type Repository interface {
-	SaveUser(ctx context.Context, email string, passHash []byte) (int64, error)
+	SaveUser(ctx context.Context, email string, passHash, yandex_token []byte) (int64, error)
 	User(ctx context.Context, email string) (models.User, error)
 	App(ctx context.Context, id int) (models.App, error)
 	Stop()

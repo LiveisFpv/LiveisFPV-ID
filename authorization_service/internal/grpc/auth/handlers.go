@@ -18,14 +18,14 @@ func (s *serverAPI) Login(
 	if in.Email == "" {
 		return nil, status.Error(codes.InvalidArgument, "email is required")
 	}
-	if in.Password == "" {
-		return nil, status.Error(codes.InvalidArgument, "password is required")
+	if in.Password == nil || in.YandexToken == nil {
+		return nil, status.Error(codes.InvalidArgument, "password or token is required")
 	}
 	if in.GetAppId() == 0 {
 		return nil, status.Error(codes.InvalidArgument, "app_id is required")
 	}
 	//take token from Auth
-	token, err := s.auth.Login(ctx, in.GetEmail(), in.GetPassword(), int(in.GetAppId()))
+	token, err := s.auth.Login(ctx, in.GetEmail(), in.GetPassword(), int(in.GetAppId()), in.GetYandexToken())
 	if err != nil {
 		if errors.Is(err, auth.ErrInvalidCredentials) {
 			return nil, status.Error(codes.InvalidArgument, "invalid email or password")
@@ -42,10 +42,10 @@ func (s *serverAPI) Register(
 	if in.Email == "" {
 		return nil, status.Error(codes.InvalidArgument, "email is required")
 	}
-	if in.Password == "" {
-		return nil, status.Error(codes.InvalidArgument, "password is required")
+	if in.Password == nil || in.YandexToken == nil {
+		return nil, status.Error(codes.InvalidArgument, "password or token is required")
 	}
-	uid, err := s.auth.RegisterNewUser(ctx, in.GetEmail(), in.GetPassword())
+	uid, err := s.auth.RegisterNewUser(ctx, in.GetEmail(), in.GetPassword(), in.GetYandexToken())
 	if err != nil {
 		if errors.Is(err, storage.ErrUserExists) {
 			return nil, status.Error(codes.AlreadyExists, "user already exists")

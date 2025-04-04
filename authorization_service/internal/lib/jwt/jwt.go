@@ -12,11 +12,12 @@ func NewToken(user models.User, app models.App, duration time.Duration) (string,
 	//Add information to token
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256,
 		jwt.MapClaims{
-			"uid":      user.ID,
-			"email":    user.Email,
-			"exp":      time.Now().Add(time.Hour * 24).Unix(), //!Есть проблема с парсом времени токен сразу протухает
-			"end_time": time.Now().Add(time.Hour * 24).Format(time.RFC3339),
-			"app_id":   app.ID,
+			"uid":          user.ID,
+			"email":        user.Email,
+			"exp":          time.Now().Add(time.Hour * 24).Unix(), //!Есть проблема с парсом времени токен сразу протухает
+			"end_time":     time.Now().Add(time.Hour * 24).Format(time.RFC3339),
+			"app_id":       app.ID,
+			"yandex_token": user.Yandex_token,
 		},
 	)
 

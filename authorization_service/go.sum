@@ -4,6 +4,10 @@ github.com/BurntSushi/toml v1.2.1 h1:9F2/+DoOYIOksmaJFPw1tGFy1eDnIJXg+UHjuD8lTak
 github.com/BurntSushi/toml v1.2.1/go.mod h1:CxXYINrC8qIiEnFrOxCa7Jy5BFHlXnUU2pbicEuybxQ=
 github.com/LiveisFPV/sso_v1 v0.0.0-20250220075905-fc712ee23d07 h1:fnP+L0LDvNOBD3whTsXtZKXBCzytHOIhYZTvp2JPwcM=
 github.com/LiveisFPV/sso_v1 v0.0.0-20250220075905-fc712ee23d07/go.mod h1:cgt97svOFWm1lgxyRlJMDWPcq3ymVRGkdznD0CiPuBs=
+github.com/LiveisFPV/sso_v1 v0.0.0-20250404101049-e9f8f56c4568 h1:OAgIWoyAJEonaRDZ61JGopNi5kvjjvDyeYwmzqfD2b0=
+github.com/LiveisFPV/sso_v1 v0.0.0-20250404101049-e9f8f56c4568/go.mod h1:cgt97svOFWm1lgxyRlJMDWPcq3ymVRGkdznD0CiPuBs=
+github.com/LiveisFPV/sso_v1 v0.1.1 h1:VibFWmPPgdYiQJ+E1eJAaxcfOMaZSDP0Dpt5GIROu60=
+github.com/LiveisFPV/sso_v1 v0.1.1/go.mod h1:cgt97svOFWm1lgxyRlJMDWPcq3ymVRGkdznD0CiPuBs=
 github.com/Microsoft/go-winio v0.6.2 h1:F2VQgta7ecxGYO8k3ZZz3RS8fVIXVxONVUPlNERoyfY=
 github.com/Microsoft/go-winio v0.6.2/go.mod h1:yd8OoFMLzJbo9gZq8j5qaps8bJ9aShtEA8Ipt1oGCvU=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
