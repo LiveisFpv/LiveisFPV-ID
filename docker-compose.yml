@@ -5,16 +5,15 @@ services:
       context: .
       dockerfile: authorization_service/dockerfile
     ports:
-      - "15432:15432"
-      # - "40001:40001"
+      - "${GRPC_PORT}:${GRPC_PORT}"
     environment:
-      - DB_HOST=db
-      - DB_PORT=5432
-      - DB_USER=postgres
-      - DB_PASSWORD=0000
-      - DB_NAME=grpc_auth_db
-      - GRPC_PORT=15432
-      - GRPC_TIMEOUT=24h
+      - DB_HOST=${DB_HOST}
+      - DB_PORT=${DB_PORT}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${DB_NAME}
+      - GRPC_PORT=${GRPC_PORT}
+      - GRPC_TIMEOUT=${GRPC_TIMEOUT}
     depends_on:
       db:
         condition: service_healthy
@@ -29,13 +28,13 @@ services:
     container_name: postgres_db
     image: postgres:17
     environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=0000
-      - POSTGRES_DB=grpc_auth_db
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=${DB_NAME}
     volumes:
       - db_data:/var/lib/postgresql/data
     healthcheck:  # Ждем, пока БД будет готова
-      test: ["CMD", "pg_isready", "-U", "postgres"]
+      test: ["CMD", "pg_isready", "-U", "${DB_USER}"]
       interval: 5s
       retries: 5
     networks:
@@ -47,13 +46,14 @@ services:
       context: ./db
       dockerfile: dockerfile
     environment:
-      - DB_USER=postgres
-      - DB_PASSWORD=0000
-      - DB_NAME=grpc_auth_db
-      - DB_PORT=5432
-      - DB_HOST=db
+      - DB_USER=${DB_HOST}
+      - DB_PASSWORD=${DB_PORT}
+      - DB_NAME=${DB_USER}
+      - DB_PORT=${DB_PASSWORD}
+      - DB_HOST=${DB_NAME}
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     networks:
       - db_network
     

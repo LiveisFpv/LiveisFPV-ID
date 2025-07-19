@@ -1,5 +1,0 @@
-env: "local"
-dsn: "postgres://postgres:0000@localhost:5432/grpc_test?sslmode=disable"
-grpc:
-  port: 18000
-  timeout: 24h
