@@ -1,10 +1,31 @@
 package cmd
 
-func main() {
-	// ! Init usecase
-	// ! Init reoisitory
+import (
+	"authorization_service/internal/config"
+	"authorization_service/pkg/logger"
+	"authorization_service/pkg/storage"
+	"context"
+	"time"
+)
 
+func main() {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	// ! Init logger
+	logger := logger.LoggerSetup(true)
 	// ! Parse config from env
+	cfg, err := config.MustLoadConfig()
+	if err != nil {
+		logger.Fatalf("Failed to load config with error: %v", err)
+		return
+	}
+	// ! Init repoisitory
+	// ! Init postgres
+	pool, err := storage.PostgresConnect(ctx, cfg.PostgresConfig)
+	if err != nil {
+		logger.Fatalf("Failed to create pool conection to postgres with error: %v", err)
+		return
+	}
+	// ! Init redis
 
 	// ! Init REST
 	// ! Init gRPC

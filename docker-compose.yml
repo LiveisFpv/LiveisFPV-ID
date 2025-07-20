@@ -14,17 +14,21 @@ services:
       - DB_NAME=${DB_NAME}
       - GRPC_PORT=${GRPC_PORT}
       - GRPC_TIMEOUT=${GRPC_TIMEOUT}
+      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_PORT=${REDIS_PORT}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
     depends_on:
-      db:
+      postgers:
         condition: service_healthy
       migrator:
         condition: service_completed_successfully
+      redis:
     networks:
       - grpc_network
-      - db_network
+      - storage_network
         
   
-  db:
+  postgres:
     container_name: postgres_db
     image: postgres:17
     environment:
@@ -32,13 +36,25 @@ services:
       - POSTGRES_PASSWORD=${DB_PASSWORD}
       - POSTGRES_DB=${DB_NAME}
     volumes:
-      - db_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
     healthcheck:  # Ждем, пока БД будет готова
       test: ["CMD", "pg_isready", "-U", "${DB_USER}"]
       interval: 5s
       retries: 5
     networks:
-      - db_network
+      - storage_network
+  
+  redis:
+    image: redis:8-alpine
+    container_name: redis
+    ports:
+      - "${REDIS_PORT}:${REDIS_PORT}"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    networks:
+      - storage_network
+
 
   migrator:
     container_name: migrator
@@ -52,19 +68,20 @@ services:
       - DB_PORT=${DB_PASSWORD}
       - DB_HOST=${DB_NAME}
     depends_on:
-      db:
+      postgers:
         condition: service_healthy
     networks:
-      - db_network
+      - storage_network
     
 
 volumes:
-  db_data:
+  postgres_data:
+  redis_data:
 
 # Before start create a network with command
 # docker network create grpc_network
 networks:
   grpc_network:
     external: true
-  db_network:
+  storage_network:
     driver: bridge
