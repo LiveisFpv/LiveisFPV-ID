@@ -20,13 +20,17 @@ func main() {
 	}
 	// ! Init repoisitory
 	// ! Init postgres
-	pool, err := storage.PostgresConnect(ctx, cfg.PostgresConfig)
+	pgPool, err := storage.PostgresConnect(ctx, cfg.PostgresConfig)
 	if err != nil {
 		logger.Fatalf("Failed to create pool conection to postgres with error: %v", err)
 		return
 	}
 	// ! Init redis
-
+	redisClient, err := storage.RedisConnect(ctx, cfg.RedisConfig)
+	if err != nil {
+		logger.Fatalf("Failed to create conection to redis with error: %v", err)
+		return
+	}
 	// ! Init REST
 	// ! Init gRPC
 
