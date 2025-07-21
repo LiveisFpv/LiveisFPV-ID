@@ -31,6 +31,7 @@ func main() {
 		logger.Fatalf("Failed to create conection to redis with error: %v", err)
 		return
 	}
+
 	// ! Init REST
 	// ! Init gRPC
 
