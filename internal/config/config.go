@@ -1,13 +1,16 @@
 package config
 
 import (
+	"time"
+
 	"github.com/ilyakaznacheev/cleanenv"
 )
 
 type Config struct {
 	PostgresConfig   PostgresConfig
-	HttpServerConfig HTTPServerConfig
 	RedisConfig      RedisConfig
+	HttpServerConfig HTTPServerConfig
+	JWTConfig        JWTConfig
 }
 
 type PostgresConfig struct {
@@ -24,6 +27,30 @@ type RedisConfig struct {
 	Port     string `env:"REDIS_PORT" env-required:"true"`
 	Password string `env:"REDIS_PASSWORD" env-required:"true"`
 	DB       int    `env:"REDIS_DB" env-default:"0"`
+}
+
+type MinioConfig struct {
+	RootUser     string `env:"MINIO_ROOT_USER" env-required:"true"`
+	RootPassword string `env:"MINIO_ROOT_PASSWORD" env-required:"true"`
+	Endpoint     string `env:"MINIO_ENDPOINT" env-required:"true"`
+	AccessKey    string `env:"MINIO_ACCESS_KEY" env-required:"true"`
+	SecretKey    string `env:"MINIO_SECRET_KEY" env-required:"true"`
+	UseSSL       bool   `env:"MINIO_USE_SSL" env-default:"false"`
+	BucketName   string `env:"MINIO_BUCKET_NAME" env-required:"true"`
+}
+
+type JWTConfig struct {
+	AccessTokenTTL  time.Duration `env:"ACCESS_TOKEN_TTL" env-default:"15m"`
+	RefreshTokenTTL time.Duration `env:"REFRESH_TOKEN_TTL" env-default:"7d"`
+	SecretKey       string        `env:"SECRET_KEY" env-required:"true"`
+}
+
+type EmailConfig struct {
+	SMTPHost     string `env:"SMTP_HOST" env-required:"true"`
+	SMTPPort     string `env:"SMTP_PORT" env-required:"true"`
+	SMTPUsername string `env:"SMTP_USERNAME" env-required:"true"`
+	SMTPPassword string `env:"SMTP_PASSWORD" env-required:"true"`
+	FromEmail    string `env:"FROM_EMAIL" env-required:"true"`
 }
 
 type HTTPServerConfig struct {

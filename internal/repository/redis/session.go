@@ -1,6 +1,7 @@
 package redis
 
 import (
+	"authorization_service/internal/domain"
 	"context"
 	"fmt"
 )
