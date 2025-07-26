@@ -3,6 +3,7 @@ package repository
 import (
 	"authorization_service/internal/domain"
 	"context"
+	"time"
 )
 
 type UserRepository interface {
@@ -21,4 +22,9 @@ type SessionRepository interface {
 	GetSessionByRefreshToken(ctx context.Context, refreshToken string) (*domain.Session, error)
 	GetAllUserSessions(ctx context.Context, userID int) ([]*domain.Session, error)
 	DeleteSession(ctx context.Context, sessionID int) error
+}
+
+type TokenBlocklist interface {
+	IsBlocked(ctx context.Context, jti string) (bool, error)
+	Block(ctx context.Context, jti string, exp time.Duration) error
 }

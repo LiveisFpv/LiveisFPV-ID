@@ -178,8 +178,13 @@ func (a *authService) Login(ctx context.Context, email string, password string) 
 	if err != nil {
 		return nil, fmt.Errorf("failed to create JWT tokens for user with email %s: %w", email, err)
 	}
+
+	jti, err := a.jwtService.ParseJTI(ctx, userTokens.AccessToken)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse JTI from access token: %w", err)
+	}
 	// Create a session for the user
-	_, err = a.sessionService.CreateSession(ctx, userTokens.RefreshToken)
+	_, err = a.sessionService.CreateSession(ctx, userTokens.RefreshToken, jti)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create session for user with email %s: %w", email, err)
 	}
@@ -225,7 +230,12 @@ func (a *authService) Refresh(ctx context.Context, refreshToken string) (*domain
 	if err != nil {
 		return nil, fmt.Errorf("failed to delete old session: %w", err)
 	}
-	_, err = a.sessionService.CreateSession(ctx, userTokens.RefreshToken)
+	jti, err := a.jwtService.ParseJTI(ctx, userTokens.AccessToken)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse JTI from access token: %w", err)
+	}
+
+	_, err = a.sessionService.CreateSession(ctx, userTokens.RefreshToken, jti)
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to create new session: %w", err)

@@ -3,11 +3,6 @@ package redis
 import (
 	"authorization_service/internal/repository"
 	"authorization_service/pkg/storage"
-	"errors"
-)
-
-var (
-	ErrorSessionNotFound = errors.New("session not found")
 )
 
 type sessionRepository struct {
@@ -16,4 +11,12 @@ type sessionRepository struct {
 
 func NewSessionRepository(redis *storage.RedisClient) repository.SessionRepository {
 	return &sessionRepository{redis: redis}
+}
+
+type TokenBlocklist struct {
+	redis *storage.RedisClient
+}
+
+func NewTokenBlocklist(redis *storage.RedisClient) repository.TokenBlocklist {
+	return &TokenBlocklist{redis: redis}
 }
