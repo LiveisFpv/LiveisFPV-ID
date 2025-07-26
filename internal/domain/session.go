@@ -3,7 +3,7 @@ package domain
 import "time"
 
 type Session struct {
-	ID           int
+	SessionID    int
 	UserID       int
 	RefreshToken string
 	UserAgent    string

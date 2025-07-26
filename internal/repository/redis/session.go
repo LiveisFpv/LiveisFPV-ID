@@ -3,16 +3,30 @@ package redis
 import (
 	"authorization_service/internal/domain"
 	"context"
-	"fmt"
 )
 
 // ! Create session on redis
-func (sr *sessionRepository) Create(ctx context.Context, session *domain.Session) error {
-	return fmt.Errorf("not implemented")
+// CreateSession implements repository.SessionRepository.
+func (s *sessionRepository) CreateSession(ctx context.Context, session *domain.Session) error {
+	panic("unimplemented")
 }
-func (sr *sessionRepository) Get(ctx context.Context, sessionID string) (*domain.Session, error) {
-	return nil, fmt.Errorf("not implemented")
+
+// DeleteSession implements repository.SessionRepository.
+func (s *sessionRepository) DeleteSession(ctx context.Context, sessionID int) error {
+	panic("unimplemented")
 }
-func (sr *sessionRepository) Delete(ctx context.Context, sessionID string) error {
-	return fmt.Errorf("not implemented")
+
+// GetAllUserSessions implements repository.SessionRepository.
+func (s *sessionRepository) GetAllUserSessions(ctx context.Context, userID int) ([]*domain.Session, error) {
+	panic("unimplemented")
+}
+
+// GetSession implements repository.SessionRepository.
+func (s *sessionRepository) GetSession(ctx context.Context, sessionID int) (*domain.Session, error) {
+	panic("unimplemented")
+}
+
+// GetSessionByRefreshToken implements repository.SessionRepository.
+func (s *sessionRepository) GetSessionByRefreshToken(ctx context.Context, refreshToken string) (*domain.Session, error) {
+	panic("unimplemented")
 }

@@ -26,8 +26,8 @@ func (ur *userRepository) UpdateUser(ctx context.Context, user *domain.User) err
 	return fmt.Errorf("not implemented")
 }
 
-func (ur *userRepository) CreateUser(ctx context.Context, user *domain.User) error {
-	return fmt.Errorf("not implemented")
+func (ur *userRepository) CreateUser(ctx context.Context, user *domain.User) (userID int, err error) {
+	return 0, fmt.Errorf("not implemented")
 }
 
 func (ur *userRepository) ConfirmEmail(ctx context.Context, userID int) error {

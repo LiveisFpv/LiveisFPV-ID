@@ -11,12 +11,14 @@ type UserRepository interface {
 	GetUserByGoogleID(ctx context.Context, id string) (*domain.User, error)
 	GetUserByVkID(ctx context.Context, id string) (*domain.User, error)
 	UpdateUser(ctx context.Context, user *domain.User) error
-	CreateUser(ctx context.Context, user *domain.User) error
+	CreateUser(ctx context.Context, user *domain.User) (userID int, err error)
 	ConfirmEmail(ctx context.Context, userID int) error
 }
 
 type SessionRepository interface {
-	Create(ctx context.Context, session *domain.Session) error
-	Get(ctx context.Context, sessionID string) (*domain.Session, error)
-	Delete(ctx context.Context, sessionID string) error
+	CreateSession(ctx context.Context, session *domain.Session) error
+	GetSession(ctx context.Context, sessionID int) (*domain.Session, error)
+	GetSessionByRefreshToken(ctx context.Context, refreshToken string) (*domain.Session, error)
+	GetAllUserSessions(ctx context.Context, userID int) ([]*domain.Session, error)
+	DeleteSession(ctx context.Context, sessionID int) error
 }
