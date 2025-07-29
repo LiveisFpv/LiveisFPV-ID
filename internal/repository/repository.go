@@ -3,7 +3,15 @@ package repository
 import (
 	"authorization_service/internal/domain"
 	"context"
+	"errors"
 	"time"
+)
+
+var (
+	ErrorUserNotFound     = errors.New("user not found")
+	ErrorUserAlreadyExist = errors.New("user already exist")
+	ErrorInvalidToken     = errors.New("invalid token")
+	ErrorTokenExpired     = errors.New("token expired")
 )
 
 type UserRepository interface {

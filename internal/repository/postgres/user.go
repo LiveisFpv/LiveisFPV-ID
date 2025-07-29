@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"authorization_service/internal/domain"
+	"authorization_service/internal/repository"
 	"context"
 	"fmt"
 
@@ -32,7 +33,7 @@ func (ur *userRepository) GetUserByID(ctx context.Context, id int) (*domain.User
 	)
 	if err != nil {
 		if err == pgx.ErrNoRows {
-			return nil, fmt.Errorf("user not found")
+			return nil, repository.ErrorUserNotFound
 		}
 		return nil, fmt.Errorf("failed to get user by ID: %w", err)
 	}
@@ -64,7 +65,7 @@ func (ur *userRepository) GetUserByEmail(ctx context.Context, email string) (*do
 	)
 	if err != nil {
 		if err == pgx.ErrNoRows {
-			return nil, fmt.Errorf("user not found")
+			return nil, repository.ErrorUserNotFound
 		}
 		return nil, fmt.Errorf("failed to get user by email: %w", err)
 	}
@@ -96,7 +97,7 @@ func (ur *userRepository) GetUserByGoogleID(ctx context.Context, id string) (*do
 	)
 	if err != nil {
 		if err == pgx.ErrNoRows {
-			return nil, fmt.Errorf("user not found")
+			return nil, repository.ErrorUserNotFound
 		}
 		return nil, fmt.Errorf("failed to get user by Google ID: %w", err)
 	}
@@ -128,7 +129,7 @@ func (ur *userRepository) GetUserByYandexID(ctx context.Context, id string) (*do
 	)
 	if err != nil {
 		if err == pgx.ErrNoRows {
-			return nil, fmt.Errorf("user not found")
+			return nil, repository.ErrorUserNotFound
 		}
 		return nil, fmt.Errorf("failed to get user by Yandex ID: %w", err)
 	}
@@ -160,7 +161,7 @@ func (ur *userRepository) GetUserByVkID(ctx context.Context, id string) (*domain
 	)
 	if err != nil {
 		if err == pgx.ErrNoRows {
-			return nil, fmt.Errorf("user not found")
+			return nil, repository.ErrorUserNotFound
 		}
 		return nil, fmt.Errorf("failed to get user by VK ID: %w", err)
 	}

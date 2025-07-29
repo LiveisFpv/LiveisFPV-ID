@@ -7,10 +7,11 @@ import (
 )
 
 type Config struct {
-	PostgresConfig   PostgresConfig
-	RedisConfig      RedisConfig
-	HttpServerConfig HTTPServerConfig
-	JWTConfig        JWTConfig
+	PostgresConfig    PostgresConfig
+	RedisConfig       RedisConfig
+	HttpServerConfig  HTTPServerConfig
+	JWTConfig         JWTConfig
+	OauthGoogleConfig OauthGoogleConfig
 }
 
 type PostgresConfig struct {
@@ -55,6 +56,11 @@ type EmailConfig struct {
 
 type HTTPServerConfig struct {
 	Port int `env:"HTTP_PORT" env-default:"8080"`
+}
+
+type OauthGoogleConfig struct {
+	ClientID     string `env:"GOOGLE_CLIENT_ID" env-required:"true"`
+	ClientSecret string `env:"GOOGLE_CLIENT_SECRET" env-required:"true"`
 }
 
 func MustLoadConfig() (*Config, error) {

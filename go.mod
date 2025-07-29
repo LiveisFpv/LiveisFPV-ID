@@ -5,6 +5,7 @@ go 1.24.0
 require github.com/sirupsen/logrus v1.9.3
 
 require (
+	cloud.google.com/go/compute/metadata v0.5.0 // indirect
 	github.com/BurntSushi/toml v1.2.1 // indirect
 	github.com/bytedance/sonic v1.11.6 // indirect
 	github.com/bytedance/sonic/loader v0.1.1 // indirect
