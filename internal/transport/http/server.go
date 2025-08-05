@@ -9,17 +9,15 @@ import (
 )
 
 type Server struct {
-	address string
-	port    string
-	app     *gin.Engine
+	port string
+	app  *gin.Engine
 }
 
 func NewHTTPServer(conf config.Config, a *app.App) Server {
 	gin.SetMode(gin.ReleaseMode)
 	s := Server{
-		address: conf.HttpServerConfig.Address,
-		port:    string(conf.HttpServerConfig.Port),
-		app:     gin.Default(),
+		port: string(conf.HttpServerConfig.Port),
+		app:  gin.Default(),
 	}
 	s.app.Use()
 	return s
