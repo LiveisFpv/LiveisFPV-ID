@@ -228,7 +228,7 @@ func (a *authService) Refresh(ctx context.Context, refreshToken string) (*domain
 		return nil, fmt.Errorf("session not found for refresh token: %s", refreshToken)
 	}
 
-	userTokens, err := a.jwtService.RefreshToken(ctx, refreshToken)
+	userTokens, err := a.jwtService.RefreshTokens(ctx, refreshToken)
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to refresh JWT tokens: %w", err)

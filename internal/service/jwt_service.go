@@ -24,7 +24,7 @@ type JWTService interface {
 	CreateJwtTokens(ctx context.Context, userID int) (*domain.UserTokens, error)
 	VerifyToken(ctx context.Context, token string, tokenType domain.TokenType) (int, error)
 	ParseToken(ctx context.Context, refresh_token string) (*domain.TokenClaims, error)
-	RefreshToken(ctx context.Context, refreshToken string) (*domain.UserTokens, error)
+	RefreshTokens(ctx context.Context, refreshToken string) (*domain.UserTokens, error)
 	ParseJTI(ctx context.Context, token string) (string, error)
 }
 
@@ -103,7 +103,6 @@ func (j *jwtService) ParseToken(ctx context.Context, refresh_token string) (*dom
 	if claims.RegisteredClaims.ExpiresAt == nil || claims.RegisteredClaims.ExpiresAt.Time.Before(time.Now()) {
 		return nil, ErrorTokenExpired
 	}
-
 	return &claims, nil
 }
 
@@ -136,7 +135,7 @@ func (j *jwtService) VerifyToken(ctx context.Context, token string, tokenType do
 			return 0, ErrorTokenBlocked
 		}
 		if err != nil {
-			j.logger.Error(ctx, "Failed to check if token is blocked", "error", err.Error())
+			j.logger.WithError(err).Error("Failed to check if token is blocked")
 			return 0, err
 		}
 	}
@@ -145,7 +144,7 @@ func (j *jwtService) VerifyToken(ctx context.Context, token string, tokenType do
 }
 
 // RefreshToken implements JWTService.
-func (j *jwtService) RefreshToken(ctx context.Context, refreshToken string) (*domain.UserTokens, error) {
+func (j *jwtService) RefreshTokens(ctx context.Context, refreshToken string) (*domain.UserTokens, error) {
 	claims, err := j.ParseToken(ctx, refreshToken)
 	if err != nil {
 		return nil, err
@@ -195,7 +194,7 @@ func (j *jwtService) createToken(ctx context.Context, userID int, tokenTTL time.
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	signedToken, err := token.SignedString([]byte(j.secretKey))
 	if err != nil {
-		j.logger.Error(ctx, "Failed signed token", "error", err.Error())
+		j.logger.WithError(err).Error("Failed signing token")
 		return "", err
 	}
 	return signedToken, nil

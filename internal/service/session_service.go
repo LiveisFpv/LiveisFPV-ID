@@ -72,6 +72,7 @@ func (s *sessionService) CreateSession(ctx context.Context, refreshToken string,
 		IPAddress:    "",
 		ExpiresAt:    claims.ExpiresAt.Time,
 		CreatedAt:    claims.IssuedAt.Time,
+		JTI:          access_jti,
 	}
 	err = s.sessionRepository.CreateSession(ctx, session)
 	if err != nil {
