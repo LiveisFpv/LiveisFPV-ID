@@ -10,11 +10,126 @@ import (
 )
 
 func Logout(ctx *gin.Context, a *app.App) {
-	panic("Logout handler not implemented")
+	cookieCfg := a.Config.CookieConfig
+
+	refreshToken, err := ctx.Cookie("refresh_token")
+	if err != nil {
+		if err == http.ErrNoCookie {
+			resp := presenters.Error(fmt.Errorf("no refresh token found: %w", err))
+			ctx.JSON(http.StatusUnauthorized, resp)
+			return
+		}
+		resp := presenters.Error(fmt.Errorf("failed to retrieve refresh token: %w", err))
+		ctx.JSON(http.StatusInternalServerError, resp)
+		return
+	}
+
+	// Clear REDIS session
+	if err := a.AuthService.Logout(ctx, refreshToken); err != nil {
+		resp := presenters.Error(fmt.Errorf("logout failed: %w", err))
+		ctx.JSON(http.StatusInternalServerError, resp)
+		return
+	}
+
+	ctx.SetCookie(
+		"refresh_token",
+		"",
+		-1,
+		cookieCfg.Path,
+		cookieCfg.Domain,
+		cookieCfg.Secure,
+		cookieCfg.HttpOnly,
+	)
+
+	resp := presenters.TokenResReq{
+		AccessToken: "",
+	}
+	ctx.JSON(http.StatusOK, resp)
 }
 
 func Refresh(ctx *gin.Context, a *app.App) {
-	panic("Refresh handler not implemented")
+	refreshToken, err := ctx.Cookie("refresh_token")
+	if err != nil {
+		if err == http.ErrNoCookie {
+			resp := presenters.Error(fmt.Errorf("no refresh token found: %w", err))
+			ctx.JSON(http.StatusUnauthorized, resp)
+			return
+		}
+		resp := presenters.Error(fmt.Errorf("failed to retrieve refresh token: %w", err))
+		ctx.JSON(http.StatusInternalServerError, resp)
+		return
+	}
+	tokens, err := a.AuthService.Refresh(ctx, refreshToken)
+	if err != nil {
+		resp := presenters.Error(fmt.Errorf("refresh token failed: %w", err))
+		ctx.JSON(http.StatusUnauthorized, resp)
+		return
+	}
+	cookieCfg := a.Config.CookieConfig
+
+	ctx.SetCookie(
+		"refresh_token",
+		tokens.RefreshToken,
+		int(cookieCfg.MaxAge.Seconds()),
+		cookieCfg.Path,
+		cookieCfg.Domain,
+		cookieCfg.Secure,
+		cookieCfg.HttpOnly,
+	)
+	resp := presenters.TokenResReq{
+		AccessToken: tokens.AccessToken,
+	}
+	ctx.JSON(http.StatusOK, resp)
+
+}
+
+func Authenticate(ctx *gin.Context, a *app.App) {
+	authHeader := ctx.GetHeader("Authorization")
+	if authHeader == "" {
+		ctx.JSON(http.StatusUnauthorized, presenters.Error(fmt.Errorf("missing Authorization header")))
+		return
+	}
+
+	const prefix = "Bearer "
+	if len(authHeader) <= len(prefix) || authHeader[:len(prefix)] != prefix {
+		ctx.JSON(http.StatusUnauthorized, presenters.Error(fmt.Errorf("invalid Authorization header format")))
+		return
+	}
+	accessToken := authHeader[len(prefix):]
+	user, err := a.AuthService.Authenticate(ctx, accessToken)
+	if err != nil {
+		ctx.JSON(http.StatusUnauthorized, presenters.Error(fmt.Errorf("authentication failed: %w", err)))
+		return
+	}
+	ctx.JSON(http.StatusOK, presenters.UserResponse{
+		FirstName:      user.FirstName,
+		LastName:       user.LastName,
+		Email:          user.Email,
+		EmailConfirmed: user.EmailConfirmed,
+		LocaleType:     user.LocaleType,
+		Roles:          user.Roles,
+		Photo:          user.Photo,
+	})
+}
+func Validate(ctx *gin.Context, a *app.App) {
+	authHeader := ctx.GetHeader("Authorization")
+	if authHeader == "" {
+		ctx.JSON(http.StatusUnauthorized, presenters.Error(fmt.Errorf("missing Authorization header")))
+		return
+	}
+
+	const prefix = "Bearer "
+	if len(authHeader) <= len(prefix) || authHeader[:len(prefix)] != prefix {
+		ctx.JSON(http.StatusUnauthorized, presenters.Error(fmt.Errorf("invalid Authorization header format")))
+		return
+	}
+	accessToken := authHeader[len(prefix):]
+	_, err := a.AuthService.Validate(ctx, accessToken)
+	if err != nil {
+		ctx.JSON(http.StatusUnauthorized, presenters.Error(fmt.Errorf("validate failed: %w", err)))
+		return
+	}
+	ctx.Status(http.StatusOK)
 }
 
 func UpdateUser(ctx *gin.Context, a *app.App) {
@@ -37,9 +152,19 @@ func Login(ctx *gin.Context, a *app.App) {
 		ctx.JSON(http.StatusUnauthorized, resp)
 		return
 	}
+	cookieCfg := a.Config.CookieConfig
+
+	ctx.SetCookie(
+		"refresh_token",
+		tokens.RefreshToken,
+		int(cookieCfg.MaxAge.Seconds()),
+		cookieCfg.Path,
+		cookieCfg.Domain,
+		cookieCfg.Secure,
+		cookieCfg.HttpOnly,
+	)
 	resp := presenters.TokenResReq{
-		AccessToken:  tokens.AccessToken,
-		RefreshToken: tokens.RefreshToken,
+		AccessToken: tokens.AccessToken,
 	}
 	ctx.JSON(http.StatusOK, resp)
 }

@@ -24,21 +24,19 @@ type emailService struct {
 	smtpUsername string
 	smtpPassword string
 	fromEmail    string
-	frontendURL  string
 	jwtSecret    string
 	domainURL    string
 	logger       *logrus.Logger
 }
 
-func NewEmailService(config *config.EmailConfig, frontendURL, jwtSecret, domainURL string, logger *logrus.Logger) EmailService {
+func NewEmailService(config *config.EmailConfig, domainURL string, logger *logrus.Logger) EmailService {
 	return &emailService{
 		smtpHost:     config.SMTPHost,
 		smtpPort:     config.SMTPPort,
 		smtpUsername: config.SMTPUsername,
 		smtpPassword: config.SMTPPassword,
 		fromEmail:    config.FromEmail,
-		frontendURL:  frontendURL,
-		jwtSecret:    jwtSecret,
+		jwtSecret:    config.JwtSecret,
 		domainURL:    domainURL,
 		logger:       logger,
 	}

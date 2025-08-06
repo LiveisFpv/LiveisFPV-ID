@@ -36,12 +36,13 @@ type jwtService struct {
 	logger          *logrus.Logger
 }
 
-func NewJWTService(config *config.JWTConfig, blocklist repository.TokenBlocklist) JWTService {
+func NewJWTService(config *config.JWTConfig, blocklist repository.TokenBlocklist, logger *logrus.Logger) JWTService {
 	return &jwtService{
 		accessTokenTTL:  config.AccessTokenTTL,
 		refreshTokenTTL: config.RefreshTokenTTL,
 		blockList:       blocklist,
 		secretKey:       config.SecretKey,
+		logger:          logger,
 	}
 }
 

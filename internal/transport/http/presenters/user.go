@@ -33,6 +33,15 @@ type UserUpdateRequest struct {
 	LocaleType *string `json:"locale_type" example:"ru-RU"`
 }
 type TokenResReq struct {
-	AccessToken  string `json:"access_token"`
-	RefreshToken string `json:"refresh_token"`
+	AccessToken string `json:"access_token"`
+}
+
+type UserResponse struct {
+	FirstName      string   `json:"first_name"`
+	LastName       string   `json:"last_name"`
+	Email          string   `json:"email"`
+	EmailConfirmed bool     `json:"email_confirmed"`
+	LocaleType     *string  `json:"locale_type"`
+	Roles          []string `json:"roles"`
+	Photo          *string  `json:"photo"`
 }

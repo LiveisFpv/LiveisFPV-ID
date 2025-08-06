@@ -41,13 +41,13 @@ type OAuthGoogleServiceImpl struct {
 	logger            *logrus.Logger
 }
 
-func NewOAuthGoogleService(userRepository repository.UserRepository, conf *config.Config, domainURL string, logger *logrus.Logger) OauthGoogleService {
+func NewOAuthGoogleService(userRepository repository.UserRepository, conf *config.Config, logger *logrus.Logger) OauthGoogleService {
 	return &OAuthGoogleServiceImpl{
 		userRepository: userRepository,
 		conf: &oauth2.Config{
 			ClientID:     conf.OauthGoogleConfig.ClientID,
 			ClientSecret: conf.OauthGoogleConfig.ClientSecret,
-			RedirectURL:  domainURL + "/oauth/google/callback",
+			RedirectURL:  conf.Domain + "/oauth/google/callback",
 			Scopes: []string{
 				"https://www.googleapis.com/auth/userinfo.profile",
 				"https://www.googleapis.com/auth/userinfo.email",

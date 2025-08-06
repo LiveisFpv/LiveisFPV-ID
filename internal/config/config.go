@@ -11,7 +11,10 @@ type Config struct {
 	RedisConfig       RedisConfig
 	HttpServerConfig  HTTPServerConfig
 	JWTConfig         JWTConfig
+	CookieConfig      CookieConfig
 	OauthGoogleConfig OauthGoogleConfig
+	EmailConfig       EmailConfig
+	Domain            string `env:"DOMAIN" env-default:"localhost"`
 }
 
 type PostgresConfig struct {
@@ -46,16 +49,25 @@ type JWTConfig struct {
 	SecretKey       string        `env:"SECRET_KEY" env-required:"true"`
 }
 
+type CookieConfig struct {
+	Domain   string        `env:"DOMAIN" env-default:"localhost"`
+	Path     string        `env:"PATH" env-default:"/"`
+	Secure   bool          `env:"SECURE" env-default:"false"`
+	HttpOnly bool          `env:"HTTP_ONLY" env-default:"true"`
+	MaxAge   time.Duration `env:"REFRESH_TOKEN_TTL" env-default:"7d"`
+}
+
 type EmailConfig struct {
 	SMTPHost     string `env:"SMTP_HOST" env-required:"true"`
 	SMTPPort     string `env:"SMTP_PORT" env-required:"true"`
 	SMTPUsername string `env:"SMTP_USERNAME" env-required:"true"`
 	SMTPPassword string `env:"SMTP_PASSWORD" env-required:"true"`
 	FromEmail    string `env:"FROM_EMAIL" env-required:"true"`
+	JwtSecret    string `env:"JWT_SECRET" env-required:"true"`
 }
 
 type HTTPServerConfig struct {
-	Port int `env:"HTTP_PORT" env-default:"8080"`
+	Port string `env:"HTTP_PORT" env-default:"8080"`
 }
 
 type OauthGoogleConfig struct {

@@ -15,6 +15,7 @@ type AuthService interface {
 	Logout(ctx context.Context, refreshToken string) error
 	Refresh(ctx context.Context, refreshToken string) (*domain.UserTokens, error)
 	Authenticate(ctx context.Context, accessToken string) (*domain.User, error)
+	Validate(ctx context.Context, accessToken string) (int, error)
 	CreateUser(ctx context.Context, user *domain.User) (*domain.User, error)
 	UpdateUser(ctx context.Context, accessToken string, user *domain.User) (*domain.User, error)
 	ConfirmEmail(ctx context.Context, token string) (int, error)
@@ -57,6 +58,14 @@ func (a *authService) Authenticate(ctx context.Context, accessToken string) (*do
 		return nil, fmt.Errorf("user with ID %d not found", userID)
 	}
 	return user, nil
+}
+
+func (a *authService) Validate(ctx context.Context, accessToken string) (int, error) {
+	userID, err := a.jwtService.VerifyToken(ctx, accessToken, domain.AccessTokenType)
+	if err != nil {
+		return 0, fmt.Errorf("failed to verify access token: %w", err)
+	}
+	return userID, nil
 }
 
 // ConfirmEmail implements AuthService.
