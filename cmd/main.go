@@ -15,6 +15,11 @@ import (
 	"time"
 )
 
+// @title SSO API
+// @version 0.1
+// @description SSO для регистрации и авторизации сервисов
+// @host localhost:8080
+// @BasePath /
 func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()

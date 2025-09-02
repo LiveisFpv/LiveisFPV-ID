@@ -9,6 +9,16 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// Logout
+// @Summary Logout user
+// @Description Logs out the user by invalidating the refresh token and clearing the cookie
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Success 200 {object} presenters.TokenResReq
+// @Failure 401 {object} presenters.ErrorResponse
+// @Failure 500 {object} presenters.ErrorResponse
+// @Router /auth/logout [post]
 func Logout(ctx *gin.Context, a *app.App) {
 	cookieCfg := a.Config.CookieConfig
 
@@ -47,6 +57,16 @@ func Logout(ctx *gin.Context, a *app.App) {
 	ctx.JSON(http.StatusOK, resp)
 }
 
+// Refresh
+// @Summary Refresh tokens
+// @Description Refreshes the access and refresh tokens using the refresh token from the cookie
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Success 200 {object} presenters.TokenResReq
+// @Failure 401 {object} presenters.ErrorResponse
+// @Failure 500 {object} presenters.ErrorResponse
+// @Router /auth/refresh [post]
 func Refresh(ctx *gin.Context, a *app.App) {
 	refreshToken, err := ctx.Cookie("refresh_token")
 	if err != nil {
@@ -83,6 +103,15 @@ func Refresh(ctx *gin.Context, a *app.App) {
 
 }
 
+// Authenticate
+// @Summary Authenticate user
+// @Description Authenticates the user using the provided access token
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Success 200 {object} presenters.UserResponse
+// @Failure 401 {object} presenters.ErrorResponse
+// @Router /auth/authenticate [get]
 func Authenticate(ctx *gin.Context, a *app.App) {
 	authHeader := ctx.GetHeader("Authorization")
 	if authHeader == "" {
@@ -111,6 +140,16 @@ func Authenticate(ctx *gin.Context, a *app.App) {
 		Photo:          user.Photo,
 	})
 }
+
+// Validate
+// @Summary Validate access token
+// @Description Validates the provided access token
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Success 200
+// @Failure 401 {object} presenters.ErrorResponse
+// @Router /auth/validate [get]
 func Validate(ctx *gin.Context, a *app.App) {
 	authHeader := ctx.GetHeader("Authorization")
 	if authHeader == "" {
@@ -132,14 +171,39 @@ func Validate(ctx *gin.Context, a *app.App) {
 	ctx.Status(http.StatusOK)
 }
 
+// UpdateUser
+// @Summary Update user
+// @Description Updates user information (not implemented)
+// @Tags User
+// @Accept json
+// @Produce json
+// @Router /user/update [put]
 func UpdateUser(ctx *gin.Context, a *app.App) {
 	panic("UpdateUser handler not implemented")
 }
 
+// ConfirmEmail
+// @Summary Confirm email
+// @Description Confirms the user's email address (not implemented)
+// @Tags User
+// @Accept json
+// @Produce json
+// @Router /user/confirm-email [post]
 func ConfirmEmail(ctx *gin.Context, a *app.App) {
 	panic("ConfirmEmail handler not implemented")
 }
 
+// Login
+// @Summary Login user
+// @Description Logs in the user and returns access and refresh tokens
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Param request body presenters.UserLoginRequest true "Login request"
+// @Success 200 {object} presenters.TokenResReq
+// @Failure 400 {object} presenters.ErrorResponse
+// @Failure 401 {object} presenters.ErrorResponse
+// @Router /auth/login [post]
 func Login(ctx *gin.Context, a *app.App) {
 	var req presenters.UserLoginRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
@@ -169,30 +233,79 @@ func Login(ctx *gin.Context, a *app.App) {
 	ctx.JSON(http.StatusOK, resp)
 }
 
+// CreateUser
+// @Summary Create user
+// @Description Creates a new user (not implemented)
+// @Tags User
+// @Accept json
+// @Produce json
+// @Router /user/create [post]
 func CreateUser(ctx *gin.Context, a *app.App) {
 	panic("CreateUser handler not implemented")
 }
 
+// OauthGoogleLogin
+// @Summary Google OAuth login
+// @Description Initiates Google OAuth login (not implemented)
+// @Tags OAuth
+// @Accept json
+// @Produce json
+// @Router /oauth/google/login [get]
 func OauthGoogleLogin(ctx *gin.Context, a *app.App) {
 	panic("OauthGoogleLogin handler not implemented")
 }
 
+// OauthGoogleCallback
+// @Summary Google OAuth callback
+// @Description Handles Google OAuth callback (not implemented)
+// @Tags OAuth
+// @Accept json
+// @Produce json
+// @Router /oauth/google/callback [get]
 func OauthGoogleCallback(ctx *gin.Context, a *app.App) {
 	panic("OauthGoogleCallback handler not implemented")
 }
 
+// OauthYandexLogin
+// @Summary Yandex OAuth login
+// @Description Initiates Yandex OAuth login (not implemented)
+// @Tags OAuth
+// @Accept json
+// @Produce json
+// @Router /oauth/yandex/login [get]
 func OauthYandexLogin(ctx *gin.Context, a *app.App) {
 	panic("OauthYandexLogin handler not implemented")
 }
 
+// OauthYandexCallback
+// @Summary Yandex OAuth callback
+// @Description Handles Yandex OAuth callback (not implemented)
+// @Tags OAuth
+// @Accept json
+// @Produce json
+// @Router /oauth/yandex/callback [get]
 func OauthYandexCallback(ctx *gin.Context, a *app.App) {
 	panic("OauthYandexCallback handler not implemented")
 }
 
+// OauthVkLogin
+// @Summary VK OAuth login
+// @Description Initiates VK OAuth login (not implemented)
+// @Tags OAuth
+// @Accept json
+// @Produce json
+// @Router /oauth/vk/login [get]
 func OauthVkLogin(ctx *gin.Context, a *app.App) {
 	panic("OauthVkLogin handler not implemented")
 }
 
+// OauthVkCallback
+// @Summary VK OAuth callback
+// @Description Handles VK OAuth callback (not implemented)
+// @Tags OAuth
+// @Accept json
+// @Produce json
+// @Router /oauth/vk/callback [get]
 func OauthVkCallback(ctx *gin.Context, a *app.App) {
 	panic("OauthVkCallback handler not implemented")
 }

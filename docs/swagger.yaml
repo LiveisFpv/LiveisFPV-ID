@@ -1,0 +1,262 @@
+basePath: /
+definitions:
+  presenters.ErrorResponse:
+    properties:
+      error:
+        type: string
+    type: object
+  presenters.TokenResReq:
+    properties:
+      access_token:
+        type: string
+    type: object
+  presenters.UserLoginRequest:
+    properties:
+      login:
+        type: string
+      password:
+        type: string
+    required:
+    - login
+    - password
+    type: object
+  presenters.UserResponse:
+    properties:
+      email:
+        type: string
+      email_confirmed:
+        type: boolean
+      first_name:
+        type: string
+      last_name:
+        type: string
+      locale_type:
+        type: string
+      photo:
+        type: string
+      roles:
+        items:
+          type: string
+        type: array
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: SSO для регистрации и авторизации сервисов
+  title: SSO API
+  version: "0.1"
+paths:
+  /auth/authenticate:
+    get:
+      consumes:
+      - application/json
+      description: Authenticates the user using the provided access token
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/presenters.UserResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/presenters.ErrorResponse'
+      summary: Authenticate user
+      tags:
+      - Auth
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Logs in the user and returns access and refresh tokens
+      parameters:
+      - description: Login request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/presenters.UserLoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/presenters.TokenResReq'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/presenters.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/presenters.ErrorResponse'
+      summary: Login user
+      tags:
+      - Auth
+  /auth/logout:
+    post:
+      consumes:
+      - application/json
+      description: Logs out the user by invalidating the refresh token and clearing
+        the cookie
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/presenters.TokenResReq'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/presenters.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/presenters.ErrorResponse'
+      summary: Logout user
+      tags:
+      - Auth
+  /auth/refresh:
+    post:
+      consumes:
+      - application/json
+      description: Refreshes the access and refresh tokens using the refresh token
+        from the cookie
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/presenters.TokenResReq'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/presenters.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/presenters.ErrorResponse'
+      summary: Refresh tokens
+      tags:
+      - Auth
+  /auth/validate:
+    get:
+      consumes:
+      - application/json
+      description: Validates the provided access token
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/presenters.ErrorResponse'
+      summary: Validate access token
+      tags:
+      - Auth
+  /oauth/google/callback:
+    get:
+      consumes:
+      - application/json
+      description: Handles Google OAuth callback (not implemented)
+      produces:
+      - application/json
+      responses: {}
+      summary: Google OAuth callback
+      tags:
+      - OAuth
+  /oauth/google/login:
+    get:
+      consumes:
+      - application/json
+      description: Initiates Google OAuth login (not implemented)
+      produces:
+      - application/json
+      responses: {}
+      summary: Google OAuth login
+      tags:
+      - OAuth
+  /oauth/vk/callback:
+    get:
+      consumes:
+      - application/json
+      description: Handles VK OAuth callback (not implemented)
+      produces:
+      - application/json
+      responses: {}
+      summary: VK OAuth callback
+      tags:
+      - OAuth
+  /oauth/vk/login:
+    get:
+      consumes:
+      - application/json
+      description: Initiates VK OAuth login (not implemented)
+      produces:
+      - application/json
+      responses: {}
+      summary: VK OAuth login
+      tags:
+      - OAuth
+  /oauth/yandex/callback:
+    get:
+      consumes:
+      - application/json
+      description: Handles Yandex OAuth callback (not implemented)
+      produces:
+      - application/json
+      responses: {}
+      summary: Yandex OAuth callback
+      tags:
+      - OAuth
+  /oauth/yandex/login:
+    get:
+      consumes:
+      - application/json
+      description: Initiates Yandex OAuth login (not implemented)
+      produces:
+      - application/json
+      responses: {}
+      summary: Yandex OAuth login
+      tags:
+      - OAuth
+  /user/confirm-email:
+    post:
+      consumes:
+      - application/json
+      description: Confirms the user's email address (not implemented)
+      produces:
+      - application/json
+      responses: {}
+      summary: Confirm email
+      tags:
+      - User
+  /user/create:
+    post:
+      consumes:
+      - application/json
+      description: Creates a new user (not implemented)
+      produces:
+      - application/json
+      responses: {}
+      summary: Create user
+      tags:
+      - User
+  /user/update:
+    put:
+      consumes:
+      - application/json
+      description: Updates user information (not implemented)
+      produces:
+      - application/json
+      responses: {}
+      summary: Update user
+      tags:
+      - User
+swagger: "2.0"
