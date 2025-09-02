@@ -32,11 +32,12 @@ services:
       - VK_CLIENT_ID=${VK_CLIENT_ID}
       - VK_CLIENT_SECRET=${VK_CLIENT_SECRET}
     depends_on:
-      postgers:
+      postgres:
         condition: service_healthy
       migrator:
         condition: service_completed_successfully
       redis:
+        condition: service_healthy
     networks:
       - grpc_network
       - storage_network
@@ -73,8 +74,8 @@ services:
   migrator:
     container_name: migrator
     build:
-      context: ./db
-      dockerfile: dockerfile
+      context: .
+      dockerfile: /tools/migrator/dockerfile
     environment:
       - DB_USER=${DB_HOST}
       - DB_PASSWORD=${DB_PORT}
@@ -82,7 +83,7 @@ services:
       - DB_PORT=${DB_PASSWORD}
       - DB_HOST=${DB_NAME}
     depends_on:
-      postgers:
+      postgres:
         condition: service_healthy
     networks:
       - storage_network
