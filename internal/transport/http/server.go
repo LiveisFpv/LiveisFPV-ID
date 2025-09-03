@@ -9,6 +9,11 @@ import (
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+
+	_ "authorization_service/docs"
+
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 type Server struct {
@@ -26,7 +31,7 @@ func NewHTTPServer(conf *config.Config, a *app.App) *Server {
 		gin.Recovery(),
 	)
 	httpServer := &http.Server{
-		Addr:    conf.HttpServerConfig.Port,
+		Addr:    conf.Domain + ":" + conf.HttpServerConfig.Port,
 		Handler: r,
 	}
 	s := Server{
@@ -40,6 +45,7 @@ func NewHTTPServer(conf *config.Config, a *app.App) *Server {
 		AllowHeaders:     []string{"Content-Type", "Authorization"},
 		AllowCredentials: true,
 	}))
+	s.app.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	// Register routes
 	MainRouter(s.app.Group("/api/auth"), a)
 	OauthRouter(s.app.Group("/api/oauth"), a)

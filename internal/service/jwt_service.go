@@ -4,6 +4,7 @@ import (
 	"authorization_service/internal/config"
 	"authorization_service/internal/domain"
 	"authorization_service/internal/repository"
+	"authorization_service/internal/types"
 	"context"
 	"errors"
 	"time"
@@ -29,8 +30,8 @@ type JWTService interface {
 }
 
 type jwtService struct {
-	accessTokenTTL  time.Duration
-	refreshTokenTTL time.Duration
+	accessTokenTTL  types.CustomDuration
+	refreshTokenTTL types.CustomDuration
 	blockList       repository.TokenBlocklist
 	secretKey       string
 	logger          *logrus.Logger
@@ -179,10 +180,10 @@ func (j *jwtService) createRefreshToken(ctx context.Context, userID int) (string
 	return j.createToken(ctx, userID, j.refreshTokenTTL, domain.RefreshTokenType)
 }
 
-func (j *jwtService) createToken(ctx context.Context, userID int, tokenTTL time.Duration, tokenType domain.TokenType) (string, error) {
+func (j *jwtService) createToken(ctx context.Context, userID int, tokenTTL types.CustomDuration, tokenType domain.TokenType) (string, error) {
 	claims := domain.TokenClaims{
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(tokenTTL)),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(tokenTTL.Duration())),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 			NotBefore: jwt.NewNumericDate(time.Now()),
 			ID:        uuid.NewString(),

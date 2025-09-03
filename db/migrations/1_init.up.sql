@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS users
     last_login_at TIMESTAMP WITH TIME ZONE,
     roles        TEXT[]   NOT NULL DEFAULT '{"USER"}',
     locale       TEXT    NOT NULL DEFAULT 'ru',
-    created_at   TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    created_at   TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_email ON users (email);
 CREATE INDEX IF NOT EXISTS idx_google_id ON users (google_id);

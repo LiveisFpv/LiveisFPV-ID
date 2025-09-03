@@ -1,23 +1,21 @@
 package main
 
 import (
-	"errors"
 	"flag"
 	"fmt"
+	"log"
 
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
-	"github.com/sirupsen/logrus"
 )
 
 func main() {
-	//go run main.go --user=postgres --password=secret --host=localhost --port=5432 --dbname=mydb --migrations-path=./migrations
+	// Параметры подключения к БД
 	var (
 		user, password, host, port, dbname, migrationsPath string
 	)
 
-	// Параметры подключения к БД
 	flag.StringVar(&user, "user", "", "PostgreSQL username")
 	flag.StringVar(&password, "password", "", "PostgreSQL password")
 	flag.StringVar(&host, "host", "localhost", "PostgreSQL host")
@@ -26,34 +24,69 @@ func main() {
 	flag.StringVar(&migrationsPath, "migrations-path", "", "Path to migration files")
 	flag.Parse()
 
-	// Валидация параметров
+	// Проверка обязательных параметров
 	if user == "" || password == "" || host == "" || port == "" || dbname == "" {
-		panic("Missing required database connection parameters")
+		log.Fatalf("Missing required database connection parameters")
 	}
 	if migrationsPath == "" {
-		panic("Missing required --migrations-path argument")
+		log.Fatalf("Missing required --migrations-path argument")
 	}
+
 	// Формируем строку подключения
 	dsn := fmt.Sprintf(
 		"postgres://%s:%s@%s:%s/%s?sslmode=disable",
 		user, password, host, port, dbname,
 	)
 
-	//Создаем объект мигратора
+	// Создаем объект мигратора
 	m, err := migrate.New("file:"+migrationsPath, dsn)
 	if err != nil {
-		panic(fmt.Sprintf("Migration init failed: %v", err))
+		log.Fatalf("Failed to initialize migrator: %v", err)
 	}
-	defer m.Close() //Закрываем соединения с БД после миграции
-
-	err = m.Up()
-
-	if err != nil {
-		if errors.Is(err, migrate.ErrNoChange) {
-			logrus.Info("No migrations to apply")
-			return
+	defer func() {
+		srcErr, dbErr := m.Close()
+		if srcErr != nil {
+			log.Printf("Source close error: %v", srcErr)
 		}
-		panic(fmt.Sprintf("Migration failed: %v", err))
+		if dbErr != nil {
+			log.Printf("Database close error: %v", dbErr)
+		}
+	}()
+
+	// Проверяем состояние базы данных
+	version, dirty, err := m.Version()
+	if err != nil && err != migrate.ErrNilVersion {
+		log.Fatalf("Failed to get migration version: %v", err)
 	}
-	logrus.Info("Migrations applied successfully")
+	if dirty {
+		log.Printf("Database is in a dirty state at version %d. Forcing clean state...", version)
+		if forceErr := m.Force(int(version)); forceErr != nil {
+			log.Fatalf("Failed to force clean migration state: %v", forceErr)
+		}
+		log.Println("Dirty state resolved. Proceeding with migrations...")
+	}
+
+	// Применяем миграции
+	if err := m.Up(); err != nil {
+		if err == migrate.ErrNoChange {
+			log.Println("No new migrations to apply")
+		} else {
+			log.Printf("Migration failed: %v", err)
+
+			// Откат миграции для предотвращения dirty database
+			if rollbackErr := m.Down(); rollbackErr != nil {
+				log.Printf("Rollback failed: %v", rollbackErr)
+			} else {
+				log.Println("Rollback completed successfully")
+			}
+
+			// Принудительный сброс состояния миграции
+			if forceErr := m.Force(-1); forceErr != nil {
+				log.Fatalf("Failed to reset migration state: %v", forceErr)
+			}
+			log.Fatalf("Migration process terminated")
+		}
+	} else {
+		log.Println("Migrations applied successfully")
+	}
 }

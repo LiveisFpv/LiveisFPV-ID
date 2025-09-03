@@ -1,7 +1,7 @@
 package config
 
 import (
-	"time"
+	"authorization_service/internal/types"
 
 	"github.com/ilyakaznacheev/cleanenv"
 )
@@ -43,27 +43,32 @@ type MinioConfig struct {
 	BucketName   string `env:"MINIO_BUCKET_NAME" env-required:"true"`
 }
 
-type JWTConfig struct {
-	AccessTokenTTL  time.Duration `env:"ACCESS_TOKEN_TTL" env-default:"15m"`
-	RefreshTokenTTL time.Duration `env:"REFRESH_TOKEN_TTL" env-default:"7d"`
-	SecretKey       string        `env:"SECRET_KEY" env-required:"true"`
-}
-
-type CookieConfig struct {
-	Domain   string        `env:"DOMAIN" env-default:"localhost"`
-	Path     string        `env:"PATH" env-default:"/"`
-	Secure   bool          `env:"SECURE" env-default:"false"`
-	HttpOnly bool          `env:"HTTP_ONLY" env-default:"true"`
-	MaxAge   time.Duration `env:"REFRESH_TOKEN_TTL" env-default:"7d"`
-}
-
 type EmailConfig struct {
 	SMTPHost     string `env:"SMTP_HOST" env-required:"true"`
 	SMTPPort     string `env:"SMTP_PORT" env-required:"true"`
 	SMTPUsername string `env:"SMTP_USERNAME" env-required:"true"`
 	SMTPPassword string `env:"SMTP_PASSWORD" env-required:"true"`
 	FromEmail    string `env:"FROM_EMAIL" env-required:"true"`
-	JwtSecret    string `env:"JWT_SECRET" env-required:"true"`
+	JwtSecret    string `env:"SMTP_JWT_SECRET" env-required:"true"`
+}
+
+type JWTConfig struct {
+	AccessTokenTTL  types.CustomDuration `env:"ACCESS_TOKEN_TTL" env-default:"15m"`
+	RefreshTokenTTL types.CustomDuration `env:"REFRESH_TOKEN_TTL" env-default:"7d"`
+	SecretKey       string               `env:"JWT_SECRET_KEY" env-required:"true"`
+}
+
+type CookieConfig struct {
+	Domain   string               `env:"DOMAIN" env-default:"localhost"`
+	Path     string               `env:"COOKIE_PATH" env-default:"/"`
+	Secure   bool                 `env:"COOKIE_SECURE" env-default:"false"`
+	HttpOnly bool                 `env:"COOKIE_HTTP_ONLY" env-default:"true"`
+	MaxAge   types.CustomDuration `env:"COOKIE_MAX_AGE" env-default:"7d"`
+}
+
+type gRPCConfig struct {
+	Port    string               `env:"GRPC_PORT" env-default:"50051"`
+	Timeout types.CustomDuration `env:"GRPC_TIMEOUT" env-default:"24h"`
 }
 
 type HTTPServerConfig struct {

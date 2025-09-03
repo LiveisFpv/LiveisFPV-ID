@@ -1,4 +1,4 @@
-package cmd
+package main
 
 import (
 	"authorization_service/internal/app"

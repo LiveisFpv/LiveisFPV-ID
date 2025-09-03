@@ -90,7 +90,7 @@ func Refresh(ctx *gin.Context, a *app.App) {
 	ctx.SetCookie(
 		"refresh_token",
 		tokens.RefreshToken,
-		int(cookieCfg.MaxAge.Seconds()),
+		int(cookieCfg.MaxAge.Duration().Seconds()),
 		cookieCfg.Path,
 		cookieCfg.Domain,
 		cookieCfg.Secure,
@@ -221,7 +221,7 @@ func Login(ctx *gin.Context, a *app.App) {
 	ctx.SetCookie(
 		"refresh_token",
 		tokens.RefreshToken,
-		int(cookieCfg.MaxAge.Seconds()),
+		int(cookieCfg.MaxAge.Duration().Seconds()),
 		cookieCfg.Path,
 		cookieCfg.Domain,
 		cookieCfg.Secure,
