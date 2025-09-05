@@ -1,4 +1,4 @@
-basePath: /
+basePath: /api
 definitions:
   presenters.ErrorResponse:
     properties:
@@ -20,6 +20,22 @@ definitions:
     - login
     - password
     type: object
+  presenters.UserRegisterRequest:
+    properties:
+      email:
+        type: string
+      first_name:
+        type: string
+      last_name:
+        type: string
+      password:
+        type: string
+    required:
+    - email
+    - first_name
+    - last_name
+    - password
+    type: object
   presenters.UserResponse:
     properties:
       email:
@@ -39,6 +55,20 @@ definitions:
           type: string
         type: array
     type: object
+  presenters.UserUpdateRequest:
+    properties:
+      email:
+        type: string
+      first_name:
+        type: string
+      last_name:
+        type: string
+      locale_type:
+        example: ru-RU
+        type: string
+      password:
+        type: string
+    type: object
 host: localhost:8080
 info:
   contact: {}
@@ -51,6 +81,12 @@ paths:
       consumes:
       - application/json
       description: Authenticates the user using the provided access token
+      parameters:
+      - description: Bearer access token
+        in: header
+        name: Authorization
+        required: true
+        type: string
       produces:
       - application/json
       responses:
@@ -65,6 +101,63 @@ paths:
       summary: Authenticate user
       tags:
       - Auth
+  /auth/confirm-email:
+    get:
+      consumes:
+      - application/json
+      description: Confirms the user's email address by email-confirmation token.
+      parameters:
+      - description: Email confirmation token
+        in: query
+        name: token
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/presenters.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/presenters.ErrorResponse'
+      summary: Confirm email
+      tags:
+      - User
+  /auth/create:
+    post:
+      consumes:
+      - application/json
+      description: Creates a new user and sends an email confirmation link.
+      parameters:
+      - description: Register request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/presenters.UserRegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/presenters.UserResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/presenters.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/presenters.ErrorResponse'
+      summary: Create user
+      tags:
+      - User
   /auth/login:
     post:
       consumes:
@@ -143,11 +236,57 @@ paths:
       summary: Refresh tokens
       tags:
       - Auth
+  /auth/update:
+    put:
+      consumes:
+      - application/json
+      description: Updates user profile fields. Requires Bearer access token in Authorization
+        header.
+      parameters:
+      - description: Bearer access token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Update request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/presenters.UserUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/presenters.UserResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/presenters.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/presenters.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/presenters.ErrorResponse'
+      summary: Update user
+      tags:
+      - User
   /auth/validate:
     get:
       consumes:
       - application/json
       description: Validates the provided access token
+      parameters:
+      - description: Bearer access token
+        in: header
+        name: Authorization
+        required: true
+        type: string
       produces:
       - application/json
       responses:
@@ -160,26 +299,63 @@ paths:
       summary: Validate access token
       tags:
       - Auth
+  /oauth/google:
+    get:
+      consumes:
+      - application/json
+      description: Initiates Google OAuth login. Redirects to Google authorization
+        page.
+      produces:
+      - application/json
+      responses:
+        "307":
+          description: Temporary Redirect
+      summary: Google OAuth login
+      tags:
+      - OAuth
   /oauth/google/callback:
     get:
       consumes:
       - application/json
-      description: Handles Google OAuth callback (not implemented)
+      description: Handles Google OAuth callback, issues auth tokens and sets refresh
+        token cookie.
+      parameters:
+      - description: OAuth state
+        in: query
+        name: state
+        type: string
+      - description: OAuth authorization code
+        in: query
+        name: code
+        required: true
+        type: string
       produces:
       - application/json
-      responses: {}
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/presenters.TokenResReq'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/presenters.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/presenters.ErrorResponse'
       summary: Google OAuth callback
       tags:
       - OAuth
-  /oauth/google/login:
+  /oauth/vk:
     get:
       consumes:
       - application/json
-      description: Initiates Google OAuth login (not implemented)
+      description: Initiates VK OAuth login (not implemented)
       produces:
       - application/json
       responses: {}
-      summary: Google OAuth login
+      summary: VK OAuth login
       tags:
       - OAuth
   /oauth/vk/callback:
@@ -193,15 +369,15 @@ paths:
       summary: VK OAuth callback
       tags:
       - OAuth
-  /oauth/vk/login:
+  /oauth/yandex:
     get:
       consumes:
       - application/json
-      description: Initiates VK OAuth login (not implemented)
+      description: Initiates Yandex OAuth login (not implemented)
       produces:
       - application/json
       responses: {}
-      summary: VK OAuth login
+      summary: Yandex OAuth login
       tags:
       - OAuth
   /oauth/yandex/callback:
@@ -215,48 +391,4 @@ paths:
       summary: Yandex OAuth callback
       tags:
       - OAuth
-  /oauth/yandex/login:
-    get:
-      consumes:
-      - application/json
-      description: Initiates Yandex OAuth login (not implemented)
-      produces:
-      - application/json
-      responses: {}
-      summary: Yandex OAuth login
-      tags:
-      - OAuth
-  /user/confirm-email:
-    post:
-      consumes:
-      - application/json
-      description: Confirms the user's email address (not implemented)
-      produces:
-      - application/json
-      responses: {}
-      summary: Confirm email
-      tags:
-      - User
-  /user/create:
-    post:
-      consumes:
-      - application/json
-      description: Creates a new user (not implemented)
-      produces:
-      - application/json
-      responses: {}
-      summary: Create user
-      tags:
-      - User
-  /user/update:
-    put:
-      consumes:
-      - application/json
-      description: Updates user information (not implemented)
-      produces:
-      - application/json
-      responses: {}
-      summary: Update user
-      tags:
-      - User
 swagger: "2.0"

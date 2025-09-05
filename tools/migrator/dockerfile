@@ -2,10 +2,12 @@ FROM golang:1.24
 
 WORKDIR /tools/migrator
 
-COPY . .
+COPY tools/migrator/ .
 
-RUN chmod +x ./tools/migrator/migrate.sh
+COPY db ./db
+
+RUN chmod +x migrate.sh
 
 RUN go mod download
 
-ENTRYPOINT ["/bin/sh", "-c", "./tools/migrator/migrate.sh"]
+ENTRYPOINT ["./migrate.sh"]

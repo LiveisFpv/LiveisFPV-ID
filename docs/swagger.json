@@ -7,7 +7,7 @@
         "version": "0.1"
     },
     "host": "localhost:8080",
-    "basePath": "/",
+    "basePath": "/api",
     "paths": {
         "/auth/authenticate": {
             "get": {
@@ -22,6 +22,15 @@
                     "Auth"
                 ],
                 "summary": "Authenticate user",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Bearer access token",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -31,6 +40,93 @@
                     },
                     "401": {
                         "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/presenters.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/confirm-email": {
+            "get": {
+                "description": "Confirms the user's email address by email-confirmation token.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "User"
+                ],
+                "summary": "Confirm email",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Email confirmation token",
+                        "name": "token",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/presenters.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/presenters.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/create": {
+            "post": {
+                "description": "Creates a new user and sends an email confirmation link.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "User"
+                ],
+                "summary": "Create user",
+                "parameters": [
+                    {
+                        "description": "Register request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/presenters.UserRegisterRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/presenters.UserResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/presenters.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/presenters.ErrorResponse"
                         }
@@ -154,6 +250,65 @@
                 }
             }
         },
+        "/auth/update": {
+            "put": {
+                "description": "Updates user profile fields. Requires Bearer access token in Authorization header.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "User"
+                ],
+                "summary": "Update user",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Bearer access token",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "description": "Update request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/presenters.UserUpdateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/presenters.UserResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/presenters.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/presenters.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/presenters.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/auth/validate": {
             "get": {
                 "description": "Validates the provided access token",
@@ -167,6 +322,15 @@
                     "Auth"
                 ],
                 "summary": "Validate access token",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Bearer access token",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK"
@@ -180,25 +344,9 @@
                 }
             }
         },
-        "/oauth/google/callback": {
+        "/oauth/google": {
             "get": {
-                "description": "Handles Google OAuth callback (not implemented)",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "OAuth"
-                ],
-                "summary": "Google OAuth callback",
-                "responses": {}
-            }
-        },
-        "/oauth/google/login": {
-            "get": {
-                "description": "Initiates Google OAuth login (not implemented)",
+                "description": "Initiates Google OAuth login. Redirects to Google authorization page.",
                 "consumes": [
                     "application/json"
                 ],
@@ -209,6 +357,76 @@
                     "OAuth"
                 ],
                 "summary": "Google OAuth login",
+                "responses": {
+                    "307": {
+                        "description": "Temporary Redirect"
+                    }
+                }
+            }
+        },
+        "/oauth/google/callback": {
+            "get": {
+                "description": "Handles Google OAuth callback, issues auth tokens and sets refresh token cookie.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "OAuth"
+                ],
+                "summary": "Google OAuth callback",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "OAuth state",
+                        "name": "state",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "OAuth authorization code",
+                        "name": "code",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/presenters.TokenResReq"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/presenters.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/presenters.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/oauth/vk": {
+            "get": {
+                "description": "Initiates VK OAuth login (not implemented)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "OAuth"
+                ],
+                "summary": "VK OAuth login",
                 "responses": {}
             }
         },
@@ -228,9 +446,9 @@
                 "responses": {}
             }
         },
-        "/oauth/vk/login": {
+        "/oauth/yandex": {
             "get": {
-                "description": "Initiates VK OAuth login (not implemented)",
+                "description": "Initiates Yandex OAuth login (not implemented)",
                 "consumes": [
                     "application/json"
                 ],
@@ -240,7 +458,7 @@
                 "tags": [
                     "OAuth"
                 ],
-                "summary": "VK OAuth login",
+                "summary": "Yandex OAuth login",
                 "responses": {}
             }
         },
@@ -257,70 +475,6 @@
                     "OAuth"
                 ],
                 "summary": "Yandex OAuth callback",
-                "responses": {}
-            }
-        },
-        "/oauth/yandex/login": {
-            "get": {
-                "description": "Initiates Yandex OAuth login (not implemented)",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "OAuth"
-                ],
-                "summary": "Yandex OAuth login",
-                "responses": {}
-            }
-        },
-        "/user/confirm-email": {
-            "post": {
-                "description": "Confirms the user's email address (not implemented)",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "User"
-                ],
-                "summary": "Confirm email",
-                "responses": {}
-            }
-        },
-        "/user/create": {
-            "post": {
-                "description": "Creates a new user (not implemented)",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "User"
-                ],
-                "summary": "Create user",
-                "responses": {}
-            }
-        },
-        "/user/update": {
-            "put": {
-                "description": "Updates user information (not implemented)",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "User"
-                ],
-                "summary": "Update user",
                 "responses": {}
             }
         }
@@ -357,6 +511,29 @@
                 }
             }
         },
+        "presenters.UserRegisterRequest": {
+            "type": "object",
+            "required": [
+                "email",
+                "first_name",
+                "last_name",
+                "password"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "first_name": {
+                    "type": "string"
+                },
+                "last_name": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string"
+                }
+            }
+        },
         "presenters.UserResponse": {
             "type": "object",
             "properties": {
@@ -383,6 +560,27 @@
                     "items": {
                         "type": "string"
                     }
+                }
+            }
+        },
+        "presenters.UserUpdateRequest": {
+            "type": "object",
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "first_name": {
+                    "type": "string"
+                },
+                "last_name": {
+                    "type": "string"
+                },
+                "locale_type": {
+                    "type": "string",
+                    "example": "ru-RU"
+                },
+                "password": {
+                    "type": "string"
                 }
             }
         }

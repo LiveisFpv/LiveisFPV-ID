@@ -77,8 +77,8 @@ services:
   redis:
     image: redis:8-alpine
     container_name: SSO_redis
-    ports:
-      - "${REDIS_PORT}:${REDIS_PORT}"
+    # ports:
+    #   - "${REDIS_PORT}:${REDIS_PORT}"
     volumes:
       - redis_data:/data
     command: redis-server --appendonly yes

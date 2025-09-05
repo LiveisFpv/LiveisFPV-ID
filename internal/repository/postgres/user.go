@@ -1,172 +1,208 @@
 package postgres
 
 import (
-	"authorization_service/internal/domain"
-	"authorization_service/internal/repository"
-	"context"
-	"fmt"
+    "authorization_service/internal/domain"
+    "authorization_service/internal/repository"
+    "context"
+    "errors"
+    "fmt"
 
-	"github.com/jackc/pgx"
+    "github.com/jackc/pgx/v5"
 )
 
 func (ur *userRepository) GetUserByID(ctx context.Context, id int) (*domain.User, error) {
-	query := `
-        SELECT id, first_name, last_name, email, email_confirmed, 
+    query := `
+        SELECT id, first_name, last_name, email, email_confirmed, pass_hash,
                google_id, yandex_id, vk_id, photo, roles, locale
         FROM users
         WHERE id = $1 AND is_active = true
     `
 
-	var user domain.User
-	err := ur.db.QueryRow(ctx, query, id).Scan(
-		&user.ID,
-		&user.FirstName,
-		&user.LastName,
-		&user.Email,
-		&user.EmailConfirmed,
-		&user.GoogleID,
-		&user.YandexID,
-		&user.VkID,
-		&user.Photo,
-		&user.Roles,
-		&user.LocaleType,
-	)
-	if err != nil {
-		if err == pgx.ErrNoRows {
-			return nil, repository.ErrorUserNotFound
-		}
-		return nil, fmt.Errorf("failed to get user by ID: %w", err)
-	}
+    var user domain.User
+    var passHash []byte
+    err := ur.db.QueryRow(ctx, query, id).Scan(
+        &user.ID,
+        &user.FirstName,
+        &user.LastName,
+        &user.Email,
+        &user.EmailConfirmed,
+        &passHash,
+        &user.GoogleID,
+        &user.YandexID,
+        &user.VkID,
+        &user.Photo,
+        &user.Roles,
+        &user.LocaleType,
+    )
+    if err != nil {
+        if errors.Is(err, pgx.ErrNoRows) {
+            return nil, repository.ErrorUserNotFound
+        }
+        return nil, fmt.Errorf("failed to get user by ID: %w", err)
+    }
 
-	return &user, nil
+    if len(passHash) > 0 {
+        s := string(passHash)
+        user.Password = &s
+    }
+
+    return &user, nil
 }
 
 func (ur *userRepository) GetUserByEmail(ctx context.Context, email string) (*domain.User, error) {
-	query := `
-        SELECT id, first_name, last_name, email, email_confirmed,
+    query := `
+        SELECT id, first_name, last_name, email, email_confirmed, pass_hash,
                google_id, yandex_id, vk_id, photo, roles, locale
         FROM users
         WHERE email = $1 AND is_active = true
     `
 
-	var user domain.User
-	err := ur.db.QueryRow(ctx, query, email).Scan(
-		&user.ID,
-		&user.FirstName,
-		&user.LastName,
-		&user.Email,
-		&user.EmailConfirmed,
-		&user.GoogleID,
-		&user.YandexID,
-		&user.VkID,
-		&user.Photo,
-		&user.Roles,
-		&user.LocaleType,
-	)
-	if err != nil {
-		if err == pgx.ErrNoRows {
-			return nil, repository.ErrorUserNotFound
-		}
-		return nil, fmt.Errorf("failed to get user by email: %w", err)
-	}
+    var user domain.User
+    var passHash []byte
+    err := ur.db.QueryRow(ctx, query, email).Scan(
+        &user.ID,
+        &user.FirstName,
+        &user.LastName,
+        &user.Email,
+        &user.EmailConfirmed,
+        &passHash,
+        &user.GoogleID,
+        &user.YandexID,
+        &user.VkID,
+        &user.Photo,
+        &user.Roles,
+        &user.LocaleType,
+    )
+    if err != nil {
+        if errors.Is(err, pgx.ErrNoRows) {
+            return nil, repository.ErrorUserNotFound
+        }
+        return nil, fmt.Errorf("failed to get user by email: %w", err)
+    }
 
-	return &user, nil
+    if len(passHash) > 0 {
+        s := string(passHash)
+        user.Password = &s
+    }
+
+    return &user, nil
 }
 
 func (ur *userRepository) GetUserByGoogleID(ctx context.Context, id string) (*domain.User, error) {
-	query := `
-        SELECT id, first_name, last_name, email, email_confirmed,
+    query := `
+        SELECT id, first_name, last_name, email, email_confirmed, pass_hash,
                google_id, yandex_id, vk_id, photo, roles, locale
         FROM users
         WHERE google_id = $1 AND is_active = true
     `
 
-	var user domain.User
-	err := ur.db.QueryRow(ctx, query, id).Scan(
-		&user.ID,
-		&user.FirstName,
-		&user.LastName,
-		&user.Email,
-		&user.EmailConfirmed,
-		&user.GoogleID,
-		&user.YandexID,
-		&user.VkID,
-		&user.Photo,
-		&user.Roles,
-		&user.LocaleType,
-	)
-	if err != nil {
-		if err == pgx.ErrNoRows {
-			return nil, repository.ErrorUserNotFound
-		}
-		return nil, fmt.Errorf("failed to get user by Google ID: %w", err)
-	}
+    var user domain.User
+    var passHash []byte
+    err := ur.db.QueryRow(ctx, query, id).Scan(
+        &user.ID,
+        &user.FirstName,
+        &user.LastName,
+        &user.Email,
+        &user.EmailConfirmed,
+        &passHash,
+        &user.GoogleID,
+        &user.YandexID,
+        &user.VkID,
+        &user.Photo,
+        &user.Roles,
+        &user.LocaleType,
+    )
+    if err != nil {
+        if errors.Is(err, pgx.ErrNoRows) {
+            return nil, repository.ErrorUserNotFound
+        }
+        return nil, fmt.Errorf("failed to get user by Google ID: %w", err)
+    }
 
-	return &user, nil
+    if len(passHash) > 0 {
+        s := string(passHash)
+        user.Password = &s
+    }
+
+    return &user, nil
 }
 
 func (ur *userRepository) GetUserByYandexID(ctx context.Context, id string) (*domain.User, error) {
-	query := `
-        SELECT id, first_name, last_name, email, email_confirmed,
+    query := `
+        SELECT id, first_name, last_name, email, email_confirmed, pass_hash,
                google_id, yandex_id, vk_id, photo, roles, locale
         FROM users
         WHERE yandex_id = $1 AND is_active = true
     `
 
-	var user domain.User
-	err := ur.db.QueryRow(ctx, query, id).Scan(
-		&user.ID,
-		&user.FirstName,
-		&user.LastName,
-		&user.Email,
-		&user.EmailConfirmed,
-		&user.GoogleID,
-		&user.YandexID,
-		&user.VkID,
-		&user.Photo,
-		&user.Roles,
-		&user.LocaleType,
-	)
-	if err != nil {
-		if err == pgx.ErrNoRows {
-			return nil, repository.ErrorUserNotFound
-		}
-		return nil, fmt.Errorf("failed to get user by Yandex ID: %w", err)
-	}
+    var user domain.User
+    var passHash []byte
+    err := ur.db.QueryRow(ctx, query, id).Scan(
+        &user.ID,
+        &user.FirstName,
+        &user.LastName,
+        &user.Email,
+        &user.EmailConfirmed,
+        &passHash,
+        &user.GoogleID,
+        &user.YandexID,
+        &user.VkID,
+        &user.Photo,
+        &user.Roles,
+        &user.LocaleType,
+    )
+    if err != nil {
+        if errors.Is(err, pgx.ErrNoRows) {
+            return nil, repository.ErrorUserNotFound
+        }
+        return nil, fmt.Errorf("failed to get user by Yandex ID: %w", err)
+    }
 
-	return &user, nil
+    if len(passHash) > 0 {
+        s := string(passHash)
+        user.Password = &s
+    }
+
+    return &user, nil
 }
 
 func (ur *userRepository) GetUserByVkID(ctx context.Context, id string) (*domain.User, error) {
-	query := `
-        SELECT id, first_name, last_name, email, email_confirmed,
+    query := `
+        SELECT id, first_name, last_name, email, email_confirmed, pass_hash,
                google_id, yandex_id, vk_id, photo, roles, locale
         FROM users
         WHERE vk_id = $1 AND is_active = true
     `
 
-	var user domain.User
-	err := ur.db.QueryRow(ctx, query, id).Scan(
-		&user.ID,
-		&user.FirstName,
-		&user.LastName,
-		&user.Email,
-		&user.EmailConfirmed,
-		&user.GoogleID,
-		&user.YandexID,
-		&user.VkID,
-		&user.Photo,
-		&user.Roles,
-		&user.LocaleType,
-	)
-	if err != nil {
-		if err == pgx.ErrNoRows {
-			return nil, repository.ErrorUserNotFound
-		}
-		return nil, fmt.Errorf("failed to get user by VK ID: %w", err)
-	}
+    var user domain.User
+    var passHash []byte
+    err := ur.db.QueryRow(ctx, query, id).Scan(
+        &user.ID,
+        &user.FirstName,
+        &user.LastName,
+        &user.Email,
+        &user.EmailConfirmed,
+        &passHash,
+        &user.GoogleID,
+        &user.YandexID,
+        &user.VkID,
+        &user.Photo,
+        &user.Roles,
+        &user.LocaleType,
+    )
+    if err != nil {
+        if errors.Is(err, pgx.ErrNoRows) {
+            return nil, repository.ErrorUserNotFound
+        }
+        return nil, fmt.Errorf("failed to get user by VK ID: %w", err)
+    }
 
-	return &user, nil
+    if len(passHash) > 0 {
+        s := string(passHash)
+        user.Password = &s
+    }
+
+    return &user, nil
 }
 
 func (ur *userRepository) UpdateUser(ctx context.Context, user *domain.User) error {
