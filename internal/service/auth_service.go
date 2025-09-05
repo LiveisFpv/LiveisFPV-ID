@@ -1,11 +1,11 @@
 package service
 
 import (
-    "authorization_service/internal/domain"
-    "authorization_service/internal/repository"
-    "context"
-    "fmt"
-    "errors"
+	"authorization_service/internal/domain"
+	"authorization_service/internal/repository"
+	"context"
+	"errors"
+	"fmt"
 
 	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
@@ -90,36 +90,36 @@ func (a *authService) ConfirmEmail(ctx context.Context, token string) (int, erro
 
 // CreateUser implements AuthService.
 func (a *authService) CreateUser(ctx context.Context, user *domain.User) (*domain.User, error) {
-    if user == nil {
-        return nil, fmt.Errorf("user cannot be nil")
-    }
-    existingUser, err := a.userRepository.GetUserByEmail(ctx, user.Email)
-    if err != nil && !errors.Is(err, repository.ErrorUserNotFound) {
-        return nil, fmt.Errorf("failed to check existing user by email %s: %w", user.Email, err)
-    }
+	if user == nil {
+		return nil, fmt.Errorf("user cannot be nil")
+	}
+	existingUser, err := a.userRepository.GetUserByEmail(ctx, user.Email)
+	if err != nil && !errors.Is(err, repository.ErrorUserNotFound) {
+		return nil, fmt.Errorf("failed to check existing user by email %s: %w", user.Email, err)
+	}
 
-    if existingUser != nil {
-        return nil, ErrUserExists
-    }
+	if existingUser != nil {
+		return nil, ErrUserExists
+	}
 
-    if user.Password == nil {
-        return nil, fmt.Errorf("password cannot be nil")
-    }
-    pass, _ := bcrypt.GenerateFromPassword([]byte(*user.Password), bcrypt.DefaultCost)
-    p := string(pass)
+	if user.Password == nil {
+		return nil, fmt.Errorf("password cannot be nil")
+	}
+	pass, _ := bcrypt.GenerateFromPassword([]byte(*user.Password), bcrypt.DefaultCost)
+	p := string(pass)
 
-    user.Password = &p
-    user.EmailConfirmed = false
+	user.Password = &p
+	user.EmailConfirmed = false
 
-    if user.Roles == nil {
-        user.Roles = []string{"USER"}
-    }
+	if user.Roles == nil {
+		user.Roles = []string{"USER"}
+	}
 
-    // Ensure locale is set to a sane default to satisfy NOT NULL
-    if user.LocaleType == nil {
-        def := "ru"
-        user.LocaleType = &def
-    }
+	// Ensure locale is set to a sane default to satisfy NOT NULL
+	if user.LocaleType == nil {
+		def := "ru"
+		user.LocaleType = &def
+	}
 
 	userID, err := a.userRepository.CreateUser(ctx, user)
 	if err != nil {

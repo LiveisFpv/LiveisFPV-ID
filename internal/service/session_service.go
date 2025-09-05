@@ -11,19 +11,6 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var (
-	ErrSessionAlreadyExists    = errors.New("session already exists with this token")
-	ErrSessionNotFound         = errors.New("session not found")
-	ErrSessionExpired          = errors.New("session has expired")
-	ErrSessionValidationFailed = errors.New("session validation failed")
-	ErrInvalidToken            = errors.New("invalid token")
-
-	ErrGetSessionByRefreshToken = errors.New("failed to get session by refresh token")
-	ErrSaveSession              = errors.New("failed to save session")
-	ErrDeleteSession            = errors.New("failed to delete session")
-	ErrGetUserSessions          = errors.New("failed to get user sessions")
-)
-
 type SessionService interface {
 	CreateSession(ctx context.Context, refreshToken string, access_jti string) (*domain.Session, error)
 	GetSessionByRefreshToken(ctx context.Context, token string) (*domain.Session, error)
@@ -59,10 +46,9 @@ func (s *sessionService) CreateSession(ctx context.Context, refreshToken string,
 
 	existingSession, err := s.sessionRepository.GetSessionByRefreshToken(ctx, refreshToken)
 	if err == nil && existingSession != nil {
-		return nil, ErrSessionAlreadyExists
-	}
-	if err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrGetSessionByRefreshToken, err)
+		return nil, domain.ErrorSessionAlreadyExists
+	} else if err != nil && !errors.Is(err, domain.ErrorSessionNotFound) {
+		return nil, fmt.Errorf("%w: %v", domain.ErrorGetSessionByRefreshToken, err)
 	}
 
 	session := &domain.Session{
@@ -76,7 +62,7 @@ func (s *sessionService) CreateSession(ctx context.Context, refreshToken string,
 	}
 	err = s.sessionRepository.CreateSession(ctx, session)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrSaveSession, err)
+		return nil, fmt.Errorf("%w: %v", domain.ErrorSaveSession, err)
 	}
 	return session, nil
 }
@@ -85,7 +71,7 @@ func (s *sessionService) CreateSession(ctx context.Context, refreshToken string,
 func (s *sessionService) DeleteAllUserSessions(ctx context.Context, userID int) error {
 	sessions, err := s.GetAllUserSessions(ctx, userID)
 	if err != nil {
-		return fmt.Errorf("%w: %v", ErrGetUserSessions, err)
+		return fmt.Errorf("%w: %v", domain.ErrorGetUserSessions, err)
 	}
 
 	for _, session := range sessions {
@@ -100,14 +86,14 @@ func (s *sessionService) DeleteAllUserSessions(ctx context.Context, userID int) 
 func (s *sessionService) DeleteSession(ctx context.Context, sessionID int) error {
 	session, err := s.sessionRepository.GetSession(ctx, sessionID)
 	if err != nil || session == nil {
-		return ErrSessionNotFound
+		return domain.ErrorSessionNotFound
 	}
 
 	s.blockList.Block(ctx, session.JTI, time.Until(session.ExpiresAt))
 
 	err = s.sessionRepository.DeleteSession(ctx, sessionID)
 	if err != nil {
-		return ErrDeleteSession
+		return domain.ErrorDeleteSession
 	}
 
 	return nil
@@ -117,7 +103,7 @@ func (s *sessionService) DeleteSession(ctx context.Context, sessionID int) error
 func (s *sessionService) GetAllUserSessions(ctx context.Context, userID int) ([]*domain.Session, error) {
 	sessions, err := s.sessionRepository.GetAllUserSessions(ctx, userID)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrGetUserSessions, err)
+		return nil, fmt.Errorf("%w: %v", domain.ErrorGetUserSessions, err)
 	}
 
 	var activeSessions []*domain.Session
@@ -134,10 +120,10 @@ func (s *sessionService) GetAllUserSessions(ctx context.Context, userID int) ([]
 func (s *sessionService) GetSessionByRefreshToken(ctx context.Context, token string) (*domain.Session, error) {
 	session, err := s.sessionRepository.GetSessionByRefreshToken(ctx, token)
 	if err != nil {
-		return nil, ErrGetSessionByRefreshToken
+		return nil, domain.ErrorGetSessionByRefreshToken
 	}
 	if session.ExpiresAt.Before(time.Now()) {
-		return nil, ErrSessionExpired
+		return nil, domain.ErrorSessionExpired
 	}
 	return session, nil
 }
@@ -146,7 +132,7 @@ func (s *sessionService) GetSessionByRefreshToken(ctx context.Context, token str
 func (s *sessionService) ValidateSession(ctx context.Context, refreshToken string) (*domain.Session, error) {
 	claims, err := s.jwtService.ParseToken(ctx, refreshToken)
 	if err != nil {
-		return nil, ErrInvalidToken
+		return nil, domain.ErrorInvalidToken
 	}
 
 	session, err := s.GetSessionByRefreshToken(ctx, refreshToken)
@@ -155,15 +141,15 @@ func (s *sessionService) ValidateSession(ctx context.Context, refreshToken strin
 	}
 
 	if session.UserID != claims.UserID {
-		return nil, ErrSessionValidationFailed
+		return nil, domain.ErrorSessionValidationFailed
 	}
 
 	if session.ExpiresAt.Before(time.Now()) {
 		err = s.sessionRepository.DeleteSession(ctx, session.SessionID)
 		if err != nil {
-			return nil, ErrDeleteSession
+			return nil, domain.ErrorDeleteSession
 		}
-		return nil, ErrSessionExpired
+		return nil, domain.ErrorSessionExpired
 	}
 
 	return session, nil
