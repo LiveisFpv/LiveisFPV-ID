@@ -1,13 +1,15 @@
 package handlers
 
 import (
-	"authorization_service/internal/app"
-	"authorization_service/internal/domain"
-	"authorization_service/internal/service"
-	"authorization_service/internal/transport/http/presenters"
-	"fmt"
-	"net/http"
-	"time"
+    "authorization_service/internal/app"
+    "authorization_service/internal/domain"
+    "authorization_service/internal/service"
+    "authorization_service/internal/transport/http/presenters"
+    "fmt"
+    "net/http"
+    "net/url"
+    "strings"
+    "time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -375,15 +377,28 @@ func CreateUser(ctx *gin.Context, a *app.App) {
 // @Tags OAuth
 // @Accept json
 // @Produce json
+// @Param redirect_url query string false "Frontend URL to redirect after callback"
 // @Success 307
 // @Router /oauth/google [get]
 func OauthGoogleLogin(ctx *gin.Context, a *app.App) {
-	state, url := a.OauthGoogleService.OauthGoogleLogin(ctx)
-
+    state, url := a.OAuthService.StartGoogleLogin(ctx)
+    a.Logger.Infoln("Redirecting to Google OAuth URL:", url)
 	// Save state cookie for 5 minutes
 	cookieCfg := a.Config.CookieConfig
 	ctx.SetCookie("oauth_state", state, int((5 * time.Minute).Seconds()), cookieCfg.Path, cookieCfg.Domain, cookieCfg.Secure, cookieCfg.HttpOnly)
-
+	// Optionally capture desired frontend redirect URL (validated against allowlist)
+	if ru := ctx.Query("redirect_url"); ru != "" {
+		a.Logger.Infof("Requested oauth redirect_url: %s", ru)
+		if isAllowedRedirect(a.Config.AllowedRedirectURLs, ru) {
+			ctx.SetCookie("oauth_redirect", ru, int((5 * time.Minute).Seconds()), cookieCfg.Path, cookieCfg.Domain, cookieCfg.Secure, true)
+		} else {
+			a.Logger.Warnf("oauth redirect_url is not allowed: %s", ru)
+			ctx.JSON(http.StatusBadRequest, presenters.Error(fmt.Errorf("invalid redirect URL")))
+		}
+	} else {
+		a.Logger.Infoln("No oauth redirect_url provided")
+		ctx.JSON(http.StatusBadRequest, presenters.Error(fmt.Errorf("missing redirect URL")))
+	}
 	ctx.Redirect(http.StatusTemporaryRedirect, url)
 }
 
@@ -395,7 +410,8 @@ func OauthGoogleLogin(ctx *gin.Context, a *app.App) {
 // @Produce json
 // @Param state query string false "OAuth state"
 // @Param code query string true "OAuth authorization code"
-// @Success 200 {object} presenters.TokenResReq
+// @Success 200 {object} presenters.TokenResReq "Returns access token if no redirect is configured"
+// @Success 307 "Redirects to frontend if redirect_url is provided and allowed"
 // @Failure 400 {object} presenters.ErrorResponse
 // @Failure 500 {object} presenters.ErrorResponse
 // @Router /oauth/google/callback [get]
@@ -417,39 +433,11 @@ func OauthGoogleCallback(ctx *gin.Context, a *app.App) {
 		return
 	}
 
-	user, err := a.OauthGoogleService.GetUserDataFromGoogle(ctx, code)
-	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, presenters.Error(fmt.Errorf("failed to get user from Google: %w", err)))
-		return
-	}
-	if user == nil || user.ID == 0 {
-		if user != nil && user.Email != "" {
-			found, getErr := a.AuthService.GetUserByEmail(ctx, user.Email)
-			if getErr != nil {
-				ctx.JSON(http.StatusInternalServerError, presenters.Error(fmt.Errorf("failed to resolve user ID: %w", getErr)))
-				return
-			}
-			user = found
-		} else {
-			ctx.JSON(http.StatusInternalServerError, presenters.Error(fmt.Errorf("invalid user data from oauth provider")))
-			return
-		}
-	}
-
-	tokens, err := a.JWTService.CreateJwtTokens(ctx, user.ID)
-	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, presenters.Error(fmt.Errorf("failed to create tokens: %w", err)))
-		return
-	}
-	jti, err := a.JWTService.ParseJTI(ctx, tokens.AccessToken)
-	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, presenters.Error(fmt.Errorf("failed to parse token id: %w", err)))
-		return
-	}
-	if _, err := a.SessionService.CreateSession(ctx, tokens.RefreshToken, jti); err != nil {
-		ctx.JSON(http.StatusInternalServerError, presenters.Error(fmt.Errorf("failed to create session: %w", err)))
-		return
-	}
+    tokens, _, err := a.OAuthService.HandleGoogleCallback(ctx, code)
+    if err != nil {
+        ctx.JSON(http.StatusInternalServerError, presenters.Error(err))
+        return
+    }
 
 	cookieCfg := a.Config.CookieConfig
 	ctx.SetCookie(
@@ -461,8 +449,44 @@ func OauthGoogleCallback(ctx *gin.Context, a *app.App) {
 		cookieCfg.Secure,
 		cookieCfg.HttpOnly,
 	)
+	// If a frontend redirect was requested, redirect there now
+	if ru, err := ctx.Cookie("oauth_redirect"); err == nil && ru != "" {
+		// clear the temporary redirect cookie
+		ctx.SetCookie("oauth_redirect", "", -1, cookieCfg.Path, cookieCfg.Domain, cookieCfg.Secure, true)
+		if isAllowedRedirect(a.Config.AllowedRedirectURLs, ru) {
+			ctx.Redirect(http.StatusTemporaryRedirect, ru)
+			return
+		}
+		a.Logger.Warnf("stored oauth redirect_url is not allowed: %s", ru)
+	}
+	// Fallback: return tokens JSON (existing behavior)
+	// ctx.JSON(http.StatusOK, presenters.TokenResReq{AccessToken: tokens.AccessToken})
+	ctx.JSON(http.StatusBadRequest, presenters.Error(fmt.Errorf("missing redirect URL")))
+}
 
-	ctx.JSON(http.StatusOK, presenters.TokenResReq{AccessToken: tokens.AccessToken})
+// isAllowedRedirect validates the redirect URL against an allowlist of URL prefixes or origins.
+func isAllowedRedirect(allowed []string, redirect string) bool {
+	if redirect == "" {
+		return false
+	}
+	u, err := url.Parse(redirect)
+	if err != nil {
+		return false
+	}
+	if u.Scheme != "http" && u.Scheme != "https" {
+		return false
+	}
+	origin := u.Scheme + "://" + u.Host
+	for _, a := range allowed {
+		a = strings.TrimSpace(a)
+		if a == "" {
+			continue
+		}
+		if redirect == a || strings.HasPrefix(redirect, a) || origin == a {
+			return true
+		}
+	}
+	return false
 }
 
 // OauthYandexLogin

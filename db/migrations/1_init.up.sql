@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS users
     last_name   TEXT    NOT NULL,
     email        TEXT    NOT NULL UNIQUE,
     email_confirmed BOOLEAN NOT NULL DEFAULT FALSE,
-    pass_hash    BYTEA    NOT NULL,
+    pass_hash    BYTEA  ,
     google_id   TEXT    UNIQUE,
     yandex_id   TEXT    UNIQUE,
     vk_id      TEXT    UNIQUE,

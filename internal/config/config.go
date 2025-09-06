@@ -7,14 +7,16 @@ import (
 )
 
 type Config struct {
-	PostgresConfig    PostgresConfig
-	RedisConfig       RedisConfig
-	HttpServerConfig  HTTPServerConfig
-	JWTConfig         JWTConfig
-	CookieConfig      CookieConfig
-	OauthGoogleConfig OauthGoogleConfig
-	EmailConfig       EmailConfig
-	Domain            string `env:"DOMAIN" env-default:"localhost"`
+    PostgresConfig    PostgresConfig
+    RedisConfig       RedisConfig
+    HttpServerConfig  HTTPServerConfig
+    JWTConfig         JWTConfig
+    CookieConfig      CookieConfig
+    OauthGoogleConfig OauthGoogleConfig
+    EmailConfig       EmailConfig
+    Domain            string `env:"DOMAIN" env-default:"localhost"`
+    AllowedCORSOrigins   []string `env:"ALLOWED_CORS_ORIGINS" env-separator:","`
+    AllowedRedirectURLs  []string `env:"ALLOWED_REDIRECT_URLS" env-separator:","`
 }
 
 type PostgresConfig struct {

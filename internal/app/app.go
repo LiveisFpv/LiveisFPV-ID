@@ -10,12 +10,14 @@ import (
 )
 
 type App struct {
-	Config             *config.Config
-	AuthService        service.AuthService
-	OauthGoogleService oauth.OauthGoogleService
-	EmailService       service.EmailService
-	JWTService         service.JWTService
-	SessionService     service.SessionService
+    Config             *config.Config
+    AuthService        service.AuthService
+    OauthGoogleService oauth.OauthGoogleService
+    OAuthService       service.OAuthService
+    EmailService       service.EmailService
+    JWTService         service.JWTService
+    SessionService     service.SessionService
+    Logger             *logrus.Logger
 }
 
 func NewApp(
@@ -29,13 +31,16 @@ func NewApp(
 	EmailService := service.NewEmailService(&cfg.EmailConfig, cfg.Domain, Logger)
 	SessionService := service.NewSessionService(SessionRepository, TokenBlocklist, JWTService, Logger)
 	AuthService := service.NewAuthService(JWTService, EmailService, SessionService, UserRepository, Logger)
-	OauthGoogleService := oauth.NewOAuthGoogleService(UserRepository, cfg, Logger)
-	return &App{
-		Config:             cfg,
-		AuthService:        AuthService,
-		OauthGoogleService: OauthGoogleService,
-		EmailService:       EmailService,
-		JWTService:         JWTService,
-		SessionService:     SessionService,
-	}
+    OauthGoogleService := oauth.NewOAuthGoogleService(UserRepository, cfg, Logger)
+    OAuthService := service.NewOAuthService(OauthGoogleService, JWTService, SessionService, UserRepository, Logger)
+    return &App{
+        Config:             cfg,
+        AuthService:        AuthService,
+        OauthGoogleService: OauthGoogleService,
+        OAuthService:       OAuthService,
+        EmailService:       EmailService,
+        JWTService:         JWTService,
+        SessionService:     SessionService,
+        Logger:             Logger,
+    }
 }

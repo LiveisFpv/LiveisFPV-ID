@@ -47,7 +47,7 @@ func NewOAuthGoogleService(userRepository repository.UserRepository, conf *confi
 		conf: &oauth2.Config{
 			ClientID:     conf.OauthGoogleConfig.ClientID,
 			ClientSecret: conf.OauthGoogleConfig.ClientSecret,
-			RedirectURL:  conf.Domain + "/oauth/google/callback",
+			RedirectURL:  "http://" + conf.Domain + ":" + conf.HttpServerConfig.Port + "/api/oauth/google/callback",
 			Scopes: []string{
 				"https://www.googleapis.com/auth/userinfo.profile",
 				"https://www.googleapis.com/auth/userinfo.email",
@@ -95,7 +95,6 @@ func (gs *OAuthGoogleServiceImpl) GetUserDataFromGoogle(ctx context.Context, cod
 				LastName:       userInfo.FamilyName,
 				FirstName:      userInfo.GivenName,
 				Email:          userInfo.Email,
-				Roles:          []string{"user"},
 				EmailConfirmed: true,
 			}
 			if userInfo.Picture != "" {

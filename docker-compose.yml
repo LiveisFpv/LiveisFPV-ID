@@ -9,6 +9,8 @@ services:
       - "${HTTP_PORT}:${HTTP_PORT}"
     environment:
       - DOMAIN=${DOMAIN}
+      - ALLOWED_REDIRECT_URLS=${ALLOWED_REDIRECT_URLS}
+      - ALLOWED_CORS_ORIGINS=${ALLOWED_CORS_ORIGINS}
 
       - DB_HOST=${DB_HOST}
       - DB_PORT=${DB_PORT}
