@@ -20,9 +20,11 @@ import (
 )
 
 type UserInfoGoogle struct {
-	ID            string `json:"id"`
+	// OpenID Connect subject identifier
+	Sub string `json:"sub"`
+	// Legacy Google+ style id (not present on OIDC userinfo)
 	Email         string `json:"email"`
-	VerifiedEmail bool   `json:"verified_email"`
+	EmailVerified bool   `json:"email_verified"`
 	Name          string `json:"name"`
 	GivenName     string `json:"given_name"`
 	FamilyName    string `json:"family_name"`
@@ -49,6 +51,7 @@ func NewOAuthGoogleService(userRepository repository.UserRepository, conf *confi
 			ClientSecret: conf.OauthGoogleConfig.ClientSecret,
 			RedirectURL:  "http://" + conf.Domain + ":" + conf.HttpServerConfig.Port + "/api/oauth/google/callback",
 			Scopes: []string{
+				"openid",
 				"https://www.googleapis.com/auth/userinfo.profile",
 				"https://www.googleapis.com/auth/userinfo.email",
 			},
@@ -86,12 +89,13 @@ func (gs *OAuthGoogleServiceImpl) GetUserDataFromGoogle(ctx context.Context, cod
 		return nil, fmt.Errorf("failed unmarshal userInfo info: %s", err.Error())
 	}
 	gs.logger.Infof("UserInfo from Google: %+v", userInfo)
-	user, err := gs.userRepository.GetUserByGoogleID(ctx, userInfo.ID)
+	googleID := userInfo.Sub
+	user, err := gs.userRepository.GetUserByGoogleID(ctx, googleID)
 	if err != nil {
 		gs.logger.Errorf("get user for google: %v", err)
 		if errors.Is(err, repository.ErrorUserNotFound) {
 			newUser := &domain.User{
-				GoogleID:       &userInfo.ID,
+				GoogleID:       func() *string { id := googleID; return &id }(),
 				LastName:       userInfo.FamilyName,
 				FirstName:      userInfo.GivenName,
 				Email:          userInfo.Email,
