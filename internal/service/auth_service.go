@@ -131,11 +131,11 @@ func (a *authService) CreateUser(ctx context.Context, user *domain.User) (*domai
 		return nil, fmt.Errorf("failed to get created user by ID %d: %w", userID, err)
 	}
 
-	err = a.emailService.SendEmailConfirmation(ctx, userID, user.Email)
+    err = a.emailService.SendEmailConfirmation(ctx, userID, user.Email)
 
-	if err != nil {
-		a.logger.Error(ctx)
-	}
+    if err != nil {
+        a.logger.WithError(err).Errorf("failed to send email confirmation: user_id=%d email=%s", userID, user.Email)
+    }
 	return user, nil
 }
 

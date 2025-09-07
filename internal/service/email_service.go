@@ -65,7 +65,7 @@ func (e *emailService) SendEmailConfirmation(ctx context.Context, userID int, em
 		return fmt.Errorf("failed to generate email confirmation token: %w", err)
 	}
 
-	confirmURL := fmt.Sprintf("%s/confirm-email?token=%s", e.domainURL, token)
+	confirmURL := fmt.Sprintf("%s/api/auth/confirm-email?token=%s", e.domainURL, token)
 
 	subject := "Подтверждение Email"
 	body := fmt.Sprintf("Здравствуйте!\n\nПерейдите по ссылке для подтверждения почты:\n\n%s\n\nЕсли это не вы — проигнорируйте письмо.", confirmURL)

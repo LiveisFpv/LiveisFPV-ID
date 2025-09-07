@@ -7,6 +7,7 @@ services:
     ports:
       - "${GRPC_PORT}:${GRPC_PORT}"
       - "${HTTP_PORT}:${HTTP_PORT}"
+      - "${SMTP_PORT}:${SMTP_PORT}"
     environment:
       - DOMAIN=${DOMAIN}
       - ALLOWED_REDIRECT_URLS=${ALLOWED_REDIRECT_URLS}
