@@ -21,8 +21,7 @@ import (
 
 type UserInfoGoogle struct {
 	// OpenID Connect subject identifier
-	Sub string `json:"sub"`
-	// Legacy Google+ style id (not present on OIDC userinfo)
+	Sub           string `json:"sub"`
 	Email         string `json:"email"`
 	EmailVerified bool   `json:"email_verified"`
 	Name          string `json:"name"`
