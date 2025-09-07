@@ -1,4 +1,4 @@
-Authorization Service (SSO API)
+﻿# LiveisFPV ID (SSO API)
 
 Single Sign-On and authentication service written in Go. Provides user registration and login, JWT access/refresh tokens, Redis-backed sessions and token blocklist, email confirmation, and OAuth 2.0 login via Google. HTTP API is documented with Swagger; core settings (domain/ports/CORS/redirects) are configured via environment variables.
 
@@ -9,7 +9,7 @@ Single Sign-On and authentication service written in Go. Provides user registrat
 - Storage: PostgreSQL (users), Redis (sessions, blocklist)
 - Docs: Swagger UI at `/swagger/index.html`
 
-Quick Start (Docker)
+## Quick Start (Docker)
 
 Prereqs:
 - Docker + Docker Compose
@@ -35,52 +35,52 @@ Compose services:
 - `redis`: sessions/blocklist
 - `migrator`: runs DB migrations from `db/migrations`
 
-Configuration (.env)
+## Configuration (.env)
 
 The service uses cleanenv to load settings. Important variables:
 
-- DOMAIN: Public hostname used for URLs/cookies (e.g. `localhost`, `.example.com`).
-- ALLOWED_CORS_ORIGINS: Comma-separated list of origins allowed by CORS (e.g. `http://localhost:5173`).
-- ALLOWED_REDIRECT_URLS: Comma-separated list of allowed redirect URLs for OAuth (e.g. `http://localhost:5173`).
+- `DOMAIN`: Public hostname used for URLs/cookies (e.g. `localhost`, `.example.com`).
+- `ALLOWED_CORS_ORIGINS`: Comma-separated list of origins allowed by CORS (e.g. `http://localhost:5173`). Required; the server fails to start if empty.
+- `ALLOWED_REDIRECT_URLS`: Comma-separated list of allowed redirect URLs for OAuth (e.g. `http://localhost:5173`).
 
 PostgreSQL:
-- DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME
-- DB_SSL (default `disable`)
+- `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`
+- `DB_SSL` (default `disable`)
 
 Redis:
-- REDIS_HOST, REDIS_PORT, REDIS_PASSWORD
-- REDIS_DB (default `0`)
+- `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD`
+- `REDIS_DB` (default `0`)
 
 Email (for confirmations):
-- SMTP_HOST, SMTP_PORT, SMTP_USERNAME, SMTP_PASSWORD, FROM_EMAIL
-- SMTP_JWT_SECRET: Secret used to sign email confirmation tokens
+- `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `FROM_EMAIL`
+- `SMTP_JWT_SECRET`: Secret used to sign email confirmation tokens
 
 JWT:
-- JWT_SECRET_KEY: Secret key used to sign tokens
-- ACCESS_TOKEN_TTL: Access token lifetime (supports `s`, `m`, `h`, `d`, `mo`) — e.g. `15m`
-- REFRESH_TOKEN_TTL: Refresh token lifetime — e.g. `7d`
+- `JWT_SECRET_KEY`: Secret key used to sign tokens
+- `ACCESS_TOKEN_TTL`: Access token lifetime (supports `s`, `m`, `h`, `d`, `mo`) — e.g. `15m`
+- `REFRESH_TOKEN_TTL`: Refresh token lifetime — e.g. `7d`
 
 Cookies:
-- COOKIE_PATH (default `/`)
-- COOKIE_SECURE (`true` in production)
-- COOKIE_HTTP_ONLY (default `true`)
-- COOKIE_MAX_AGE (duration like `7d`)
+- `COOKIE_PATH` (default `/`)
+- `COOKIE_SECURE` (`true` in production)
+- `COOKIE_HTTP_ONLY` (default `true`)
+- `COOKIE_MAX_AGE` (duration like `7d`)
 - Note: Cookie domain is taken from `DOMAIN`.
 
 gRPC (scaffolding present, not started by default):
-- GRPC_PORT (default `50051`)
-- GRPC_TIMEOUT (default `24h`)
+- `GRPC_PORT` (default `50051`)
+- `GRPC_TIMEOUT` (default `24h`)
 
 HTTP:
-- HTTP_PORT (default `8080`)
+- `HTTP_PORT` (default `8080`)
 
 OAuth (Google):
-- GOOGLE_CLIENT_ID
-- GOOGLE_CLIENT_SECRET
+- `GOOGLE_CLIENT_ID`
+- `GOOGLE_CLIENT_SECRET`
 
 Tip: If you set an env var to an empty string (e.g. `DOMAIN=`) the library treats it as “set”, so env-default will not apply. Set a real value or remove the variable.
 
-Endpoints (HTTP)
+## Endpoints (HTTP)
 
 Base path: `/api`
 
@@ -97,21 +97,20 @@ OAuth:
 - `GET /api/oauth/google?redirect_url=<frontend>` — Start Google OAuth. Saves state cookie (and optional redirect_url if allowed) and redirects to Google.
 - `GET /api/oauth/google/callback?code=...&state=...` — Callback. Creates session, sets refresh cookie and either:
   - Redirects (307) to allowed `redirect_url` (if provided/allowed), or
-  - Returns JSON with `error`.
+  - Returns JSON with `{ "error": "..." }`.
 
 Yandex/VK routes exist but currently return “Not Implemented”.
 
-OAuth Notes (Google)
+## OAuth Notes (Google)
 
-- Uses Google OIDC userinfo; user identifier is `sub`.
-- Default scopes: `openid`, `https://www.googleapis.com/auth/userinfo.profile`, `https://www.googleapis.com/auth/userinfo.email`.
+- Uses Google OIDC userinfo; user identifier is `sub` (falls back to `id` when present). Default scopes include `openid`.
 - Multi-frontend flow:
   - Frontend calls `/api/oauth/google?redirect_url=<encoded URL>`.
   - The backend validates redirect_url against `ALLOWED_REDIRECT_URLS`, stores it in a temporary cookie, and redirects to Google.
   - After callback, backend sets the refresh cookie and redirects (307) to the approved redirect_url.
   - Frontend calls `/api/auth/refresh` with `credentials: 'include'` to obtain an access_token.
 
-Swagger
+## Swagger
 
 - Swagger UI: `GET /swagger/index.html`
 - Host and basePath are set dynamically from `DOMAIN` and `HTTP_PORT` at server startup.
@@ -119,13 +118,13 @@ Swagger
   1) `go install github.com/swaggo/swag/cmd/swag@latest`
   2) From repo root: `swag init -g cmd/main.go -o docs`
 
-Data & Migrations
+## Data & Migrations
 
 - Migrations live in `db/migrations`. A small migrator in `tools/migrator` runs at startup in Compose.
 - Users table (`db/migrations/1_init.up.sql`) includes fields for OAuth IDs and has defaults (`roles` default to `{"USER"}`, `locale` default `ru`).
 - Repository uses pgx; user lookups by id/email/google_id.
 
-Internals (Overview)
+## Internals (Overview)
 
 - `internal/app`: wires config, repositories, and services.
 - `internal/config`: `cleanenv` config structs + custom duration type.
@@ -140,7 +139,7 @@ Internals (Overview)
 - `internal/transport/http`: Gin server, CORS, routers, handlers, presenters.
 - `internal/transport/rpc`: gRPC scaffolding (not wired in `main.go`).
 
-Local Development
+## Local Development
 
 Run without Docker (requires running Postgres + Redis):
 - Set `.env` and export variables, or rely on OS env.
@@ -152,21 +151,32 @@ Formatting/Build:
 Swagger dev:
 - Update handler annotations and run `swag init` (see Swagger section).
 
-Security & Deployment
+## VPS Deployment (Makefile)
+
+Run these commands directly on the VPS in the repo directory:
+- `make deploy` — build and start (detached)
+- `make logs` — tail logs
+- `make down` — stop stack
+- `make rebuild` — rebuild without cache and start
+- `make restart` — restart only `core` service
+- `make migrate` — run migrator one-off (optional)
+- If you use Compose v2 plugin, run with `DC="docker compose"`, e.g.: `make deploy DC="docker compose"`
+
+## Security & Deployment Notes
 
 - Set a strong `JWT_SECRET_KEY` and rotate secrets safely.
 - Use `COOKIE_SECURE=true` and HTTPS in production; consider `SameSite=None` for true cross-site flows.
 - Set `DOMAIN` to a registrable/public domain (or a parent like `.example.com` for subdomains) so cookies are scoped correctly.
 - Configure `ALLOWED_CORS_ORIGINS` and `ALLOWED_REDIRECT_URLS` to the exact frontends you use.
 
-Troubleshooting
+## Troubleshooting
 
 - “Server is running on :8080”: `DOMAIN` is empty. When env var is present but empty, default doesn’t apply; set `DOMAIN=localhost` (or remove var) so default works.
+- “no allowed CORS origins configured”: set `ALLOWED_CORS_ORIGINS` in `.env` (comma-separated) and restart.
 - OAuth callback shows backend page instead of redirect: pass `redirect_url` and allow it in `ALLOWED_REDIRECT_URLS`.
 - CORS or cookies not working: ensure origin is in `ALLOWED_CORS_ORIGINS` and frontend requests use `credentials: 'include'`. For cross-site cookies you may need `Secure` and `SameSite=None`.
 - Email not sent: verify SMTP settings and network egress.
 
-License
+## License
 
-This repository does not currently declare a license. Add one if you plan to distribute it.
-
+Repository is licensed under the Apache 2.0 license. The terms of the license are detailed in LICENSE.
