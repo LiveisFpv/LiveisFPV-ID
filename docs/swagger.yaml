@@ -303,8 +303,14 @@ paths:
     get:
       consumes:
       - application/json
-      description: Initiates Google OAuth login. Redirects to Google authorization
-        page.
+      description: Initiates Google OAuth login. Builds a signed state token and redirects
+        to Google.
+      parameters:
+      - description: Frontend URL to redirect after callback (must be allowlisted)
+        in: query
+        name: redirect_url
+        required: true
+        type: string
       produces:
       - application/json
       responses:
@@ -317,12 +323,13 @@ paths:
     get:
       consumes:
       - application/json
-      description: Handles Google OAuth callback, issues auth tokens and sets refresh
-        token cookie.
+      description: Handles Google OAuth callback, validates signed state, issues tokens
+        and sets refresh token cookie.
       parameters:
-      - description: OAuth state
+      - description: Signed OAuth state
         in: query
         name: state
+        required: true
         type: string
       - description: OAuth authorization code
         in: query
@@ -333,9 +340,11 @@ paths:
       - application/json
       responses:
         "200":
-          description: OK
+          description: Returns access token if no redirect is configured
           schema:
             $ref: '#/definitions/presenters.TokenResReq'
+        "307":
+          description: Redirects to frontend if redirect_url is provided and allowed
         "400":
           description: Bad Request
           schema:

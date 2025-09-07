@@ -33,6 +33,7 @@ type UserInfoGoogle struct {
 type OauthGoogleService interface {
 	OauthGoogleLogin(ctx context.Context) (state, url string)
 	GetUserDataFromGoogle(ctx context.Context, code string) (*domain.User, error)
+	AuthURLWithState(state string) string
 }
 
 type OAuthGoogleServiceImpl struct {
@@ -100,10 +101,36 @@ func (gs *OAuthGoogleServiceImpl) GetUserDataFromGoogle(ctx context.Context, cod
 				Email:          userInfo.Email,
 				EmailConfirmed: true,
 			}
+
 			if userInfo.Picture != "" {
 				newUser.Photo = &userInfo.Picture
 			}
-			_, err := gs.userRepository.CreateUser(ctx, newUser)
+
+			user, err := gs.userRepository.GetUserByEmail(ctx, userInfo.Email)
+			if user != nil && err == nil {
+				gs.logger.Infof("resolve user by email: %+v", user)
+				if user.GoogleID == nil || *user.GoogleID == "" {
+					user.GoogleID = newUser.GoogleID
+					if user.FirstName == "" {
+						user.FirstName = newUser.FirstName
+					}
+					if user.LastName == "" {
+						user.LastName = newUser.LastName
+					}
+					if user.Photo == nil {
+						user.Photo = newUser.Photo
+					}
+					user.EmailConfirmed = true
+					err = gs.userRepository.UpdateUser(ctx, user)
+					if err != nil {
+						gs.logger.Errorf("error update user: %v", err)
+						return nil, err
+					}
+				}
+				return user, nil
+			}
+
+			_, err = gs.userRepository.CreateUser(ctx, newUser)
 			gs.logger.Infof("create user for google: %+v", newUser)
 			if err != nil {
 				gs.logger.Errorf("error create user: %v", err)
@@ -125,6 +152,11 @@ func (gs *OAuthGoogleServiceImpl) OauthGoogleLogin(ctx context.Context) (state s
 
 	u := gs.conf.AuthCodeURL(oauthState)
 	return oauthState, u
+}
+
+// AuthURLWithState returns the Google OAuth auth URL for a provided state.
+func (gs *OAuthGoogleServiceImpl) AuthURLWithState(state string) string {
+	return gs.conf.AuthCodeURL(state)
 }
 
 func generateStateOauthCookie() string {

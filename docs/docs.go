@@ -352,7 +352,7 @@ const docTemplate = `{
         },
         "/oauth/google": {
             "get": {
-                "description": "Initiates Google OAuth login. Redirects to Google authorization page.",
+                "description": "Initiates Google OAuth login. Builds a signed state token and redirects to Google.",
                 "consumes": [
                     "application/json"
                 ],
@@ -363,6 +363,15 @@ const docTemplate = `{
                     "OAuth"
                 ],
                 "summary": "Google OAuth login",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Frontend URL to redirect after callback (must be allowlisted)",
+                        "name": "redirect_url",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
                 "responses": {
                     "307": {
                         "description": "Temporary Redirect"
@@ -372,7 +381,7 @@ const docTemplate = `{
         },
         "/oauth/google/callback": {
             "get": {
-                "description": "Handles Google OAuth callback, issues auth tokens and sets refresh token cookie.",
+                "description": "Handles Google OAuth callback, validates signed state, issues tokens and sets refresh token cookie.",
                 "consumes": [
                     "application/json"
                 ],
@@ -386,9 +395,10 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "OAuth state",
+                        "description": "Signed OAuth state",
                         "name": "state",
-                        "in": "query"
+                        "in": "query",
+                        "required": true
                     },
                     {
                         "type": "string",
@@ -400,10 +410,13 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "Returns access token if no redirect is configured",
                         "schema": {
                             "$ref": "#/definitions/presenters.TokenResReq"
                         }
+                    },
+                    "307": {
+                        "description": "Redirects to frontend if redirect_url is provided and allowed"
                     },
                     "400": {
                         "description": "Bad Request",

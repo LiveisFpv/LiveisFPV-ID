@@ -32,7 +32,7 @@ func NewApp(
 	SessionService := service.NewSessionService(SessionRepository, TokenBlocklist, JWTService, Logger)
 	AuthService := service.NewAuthService(JWTService, EmailService, SessionService, UserRepository, Logger)
     OauthGoogleService := oauth.NewOAuthGoogleService(UserRepository, cfg, Logger)
-    OAuthService := service.NewOAuthService(OauthGoogleService, JWTService, SessionService, UserRepository, Logger)
+    OAuthService := service.NewOAuthService(OauthGoogleService, JWTService, SessionService, UserRepository, Logger, cfg.JWTConfig.SecretKey, cfg.AllowedRedirectURLs)
     return &App{
         Config:             cfg,
         AuthService:        AuthService,
