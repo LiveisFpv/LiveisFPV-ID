@@ -44,19 +44,23 @@ type OAuthGoogleServiceImpl struct {
 }
 
 func NewOAuthGoogleService(userRepository repository.UserRepository, conf *config.Config, logger *logrus.Logger) OauthGoogleService {
-	return &OAuthGoogleServiceImpl{
-		userRepository: userRepository,
-		conf: &oauth2.Config{
-			ClientID:     conf.OauthGoogleConfig.ClientID,
-			ClientSecret: conf.OauthGoogleConfig.ClientSecret,
-			RedirectURL:  "http://" + conf.Domain + ":" + conf.HttpServerConfig.Port + "/api/oauth/google/callback",
-			Scopes: []string{
-				"openid",
-				"https://www.googleapis.com/auth/userinfo.profile",
-				"https://www.googleapis.com/auth/userinfo.email",
-			},
-			Endpoint: google.Endpoint,
-		},
+    base := conf.PublicURL
+    if base == "" {
+        base = "http://" + conf.Domain + ":" + conf.HttpServerConfig.Port
+    }
+    return &OAuthGoogleServiceImpl{
+        userRepository: userRepository,
+        conf: &oauth2.Config{
+            ClientID:     conf.OauthGoogleConfig.ClientID,
+            ClientSecret: conf.OauthGoogleConfig.ClientSecret,
+            RedirectURL:  base + "/api/oauth/google/callback",
+            Scopes: []string{
+                "openid",
+                "https://www.googleapis.com/auth/userinfo.profile",
+                "https://www.googleapis.com/auth/userinfo.email",
+            },
+            Endpoint: google.Endpoint,
+        },
 		oauthGoogleUrlAPI: "https://www.googleapis.com/oauth2/v3/userinfo",
 		logger:            logger,
 	}

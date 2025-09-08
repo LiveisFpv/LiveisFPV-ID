@@ -44,12 +44,16 @@ func NewOAuthYandexService(userRepository repository.UserRepository, conf *confi
         AuthURL:  "https://oauth.yandex.ru/authorize",
         TokenURL: "https://oauth.yandex.ru/token",
     }
+    base := conf.PublicURL
+    if base == "" {
+        base = "http://" + conf.Domain + ":" + conf.HttpServerConfig.Port
+    }
     return &OAuthYandexServiceImpl{
         userRepository: userRepository,
         conf: &oauth2.Config{
             ClientID:     conf.OauthYandexConfig.ClientID,
             ClientSecret: conf.OauthYandexConfig.ClientSecret,
-            RedirectURL:  "http://" + conf.Domain + ":" + conf.HttpServerConfig.Port + "/api/oauth/yandex/callback",
+            RedirectURL:  base + "/api/oauth/yandex/callback",
             Scopes:       []string{"login:email", "login:info"},
             Endpoint:     endpoint,
         },

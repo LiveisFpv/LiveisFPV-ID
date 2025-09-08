@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"net/url"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -49,10 +50,21 @@ func NewHTTPServer(conf *config.Config, a *app.App) *Server {
 	}
 
 	// Update swagger docs host/schemes dynamically from env
-	docs.SwaggerInfo.Host = conf.Domain + ":" + conf.HttpServerConfig.Port
 	docs.SwaggerInfo.BasePath = "/api"
-	if len(docs.SwaggerInfo.Schemes) == 0 {
-		docs.SwaggerInfo.Schemes = []string{"http"}
+	if conf.PublicURL != "" {
+		if u, err := url.Parse(conf.PublicURL); err == nil {
+			docs.SwaggerInfo.Host = u.Host
+			if u.Scheme == "https" {
+				docs.SwaggerInfo.Schemes = []string{"https"}
+			} else {
+				docs.SwaggerInfo.Schemes = []string{"http"}
+			}
+		}
+	} else {
+		docs.SwaggerInfo.Host = conf.Domain + ":" + conf.HttpServerConfig.Port
+		if len(docs.SwaggerInfo.Schemes) == 0 {
+			docs.SwaggerInfo.Schemes = []string{"http"}
+		}
 	}
 
 	s.app.Use(cors.New(cors.Config{

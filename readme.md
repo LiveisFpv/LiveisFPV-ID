@@ -42,6 +42,7 @@ The service uses cleanenv to load settings. Important variables:
 - `DOMAIN`: Public hostname used for URLs/cookies (e.g. `localhost`, `.example.com`).
 - `ALLOWED_CORS_ORIGINS`: Comma-separated list of origins allowed by CORS (e.g. `http://localhost:5173`). Required; the server fails to start if empty.
 - `ALLOWED_REDIRECT_URLS`: Comma-separated list of allowed redirect URLs for OAuth (e.g. `http://localhost:5173`).
+- `PUBLIC_URL`: Externally reachable URL of this service (e.g. `https://id.example.com`). Used to build OAuth callbacks and emails.
 
 PostgreSQL:
 - `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`
@@ -169,12 +170,37 @@ Run these commands directly on the VPS in the repo directory:
 - `make migrate` - run migrator one-off (optional)
 - If you use Compose v2 plugin, run with `DC="docker compose"`, e.g.: `make deploy DC="docker compose"`
 
+## Reverse Proxy (nginx) + HTTPS (Let's Encrypt)
+
+Compose already contains `nginx` and `certbot` services to terminate TLS and proxy to `core`:
+
+1) DNS: point `DOMAIN` (e.g. `id.example.com`) A/AAAA records to your VPS IP.
+2) Set in `.env`:
+   - `DOMAIN=id.example.com`
+   - `PUBLIC_URL=https://id.example.com`
+   - Add your frontends to `ALLOWED_CORS_ORIGINS` and `ALLOWED_REDIRECT_URLS` with https scheme.
+3) Start nginx and core:
+   - `docker compose up -d nginx core` (or `make deploy` to start all)
+4) Issue certificate (webroot challenge):
+   - `docker compose run --rm certbot certonly --webroot -w /var/www/certbot -d $env:DOMAIN --email you@example.com --agree-tos -n` (PowerShell)
+   - Linux shell: `DOMAIN=id.example.com docker compose run --rm certbot certonly --webroot -w /var/www/certbot -d $DOMAIN --email you@example.com --agree-tos -n`
+5) Reload nginx to enable HTTPS:
+   - `docker compose restart nginx` or `docker compose exec nginx nginx -s reload`
+6) Auto‑renew (cron):
+   - Add a cron job on VPS: `0 3 * * * cd /opt/authorization_service && docker compose run --rm certbot renew --webroot -w /var/www/certbot && docker compose exec -T nginx nginx -s reload`
+
+Notes
+- nginx config is templated from `nginx/templates` using env `NGINX_HOST` and `CORE_UPSTREAM`. Until the cert exists, nginx serves HTTP only and redirects to HTTPS once cert is present.
+- You can restrict external access to `core` by removing `HTTP_PORT` from `core` ports section if nginx is the only entrypoint.
+- Ensure VPS firewall allows 80 and 443.
+
 ## Security & Deployment Notes
 
 - Set a strong `JWT_SECRET_KEY` and rotate secrets safely.
 - Use `COOKIE_SECURE=true` and HTTPS in production; consider `SameSite=None` for true cross-site flows.
 - Set `DOMAIN` to a registrable/public domain (or a parent like `.example.com` for subdomains) so cookies are scoped correctly.
 - Configure `ALLOWED_CORS_ORIGINS` and `ALLOWED_REDIRECT_URLS` to the exact frontends you use.
+- Set `PUBLIC_URL` to an https URL in production so OAuth callbacks and email links are correct.
 
 ## Troubleshooting
 

@@ -6,10 +6,11 @@ services:
       dockerfile: dockerfile
     ports:
       - "${GRPC_PORT}:${GRPC_PORT}"
-      - "${HTTP_PORT}:${HTTP_PORT}"
+      # - "${HTTP_PORT}:${HTTP_PORT}"
       - "${SMTP_PORT}:${SMTP_PORT}"
     environment:
       - DOMAIN=${DOMAIN}
+      - PUBLIC_URL=${PUBLIC_URL}
       - ALLOWED_REDIRECT_URLS=${ALLOWED_REDIRECT_URLS}
       - ALLOWED_CORS_ORIGINS=${ALLOWED_CORS_ORIGINS}
 
@@ -59,6 +60,37 @@ services:
     networks:
       - grpc_network
       - storage_network
+
+  nginx:
+    container_name: SSO_nginx
+    build:
+      context: ./nginx
+    environment:
+      - NGINX_HOST=${DOMAIN}
+      - CORE_UPSTREAM=http://core:${HTTP_PORT}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    depends_on:
+      core:
+        condition: service_started
+    networks:
+      - grpc_network
+
+  certbot:
+    image: certbot/certbot:latest
+    container_name: SSO_certbot
+    volumes:
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    entrypoint: /bin/sh -c
+    # Usage examples (run as: docker compose run --rm certbot <args>):
+    # certonly --webroot -w /var/www/certbot -d ${DOMAIN} --email you@example.com --agree-tos -n
+    # renew --webroot -w /var/www/certbot
+    command: "echo 'Run with docker compose run --rm certbot <command>'"
         
   
   postgres:
@@ -68,8 +100,8 @@ services:
       - POSTGRES_USER=${DB_USER}
       - POSTGRES_PASSWORD=${DB_PASSWORD}
       - POSTGRES_DB=${DB_NAME}
-    ports:
-      - "15432:${DB_PORT}"
+    # ports:
+      # - "15432:${DB_PORT}"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:  # Ждем, пока БД будет готова

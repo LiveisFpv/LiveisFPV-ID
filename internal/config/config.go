@@ -16,6 +16,7 @@ type Config struct {
     OauthYandexConfig OauthYandexConfig
     EmailConfig       EmailConfig
     Domain            string `env:"DOMAIN" env-default:"localhost"`
+    PublicURL         string `env:"PUBLIC_URL"`
     AllowedCORSOrigins   []string `env:"ALLOWED_CORS_ORIGINS" env-separator:","`
     AllowedRedirectURLs  []string `env:"ALLOWED_REDIRECT_URLS" env-separator:","`
 }

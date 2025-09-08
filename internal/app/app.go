@@ -29,7 +29,11 @@ func NewApp(
 	Logger *logrus.Logger,
 ) *App {
 	JWTService := service.NewJWTService(&cfg.JWTConfig, TokenBlocklist, Logger)
-	EmailService := service.NewEmailService(&cfg.EmailConfig, cfg.Domain, Logger)
+    baseURL := cfg.PublicURL
+    if baseURL == "" {
+        baseURL = "http://" + cfg.Domain + ":" + cfg.HttpServerConfig.Port
+    }
+    EmailService := service.NewEmailService(&cfg.EmailConfig, baseURL, Logger)
 	SessionService := service.NewSessionService(SessionRepository, TokenBlocklist, JWTService, Logger)
 	AuthService := service.NewAuthService(JWTService, EmailService, SessionService, UserRepository, Logger)
     OauthGoogleService := oauth.NewOAuthGoogleService(UserRepository, cfg, Logger)
