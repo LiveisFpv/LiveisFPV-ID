@@ -3,7 +3,7 @@ services:
     container_name: SSO_Core
     build:
       context: .
-      dockerfile: dockerfile
+      dockerfile: ./dockerfile
     ports:
       - "${GRPC_PORT}:${GRPC_PORT}"
       # - "${HTTP_PORT}:${HTTP_PORT}"
@@ -127,7 +127,7 @@ services:
     container_name: SSO_migrator
     build:
       context: .
-      dockerfile: /tools/migrator/dockerfile
+      dockerfile: ./tools/migrator/dockerfile
     environment:
       - DB_USER=${DB_USER}
       - DB_PASSWORD=${DB_PASSWORD}
