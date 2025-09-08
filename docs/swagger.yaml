@@ -339,10 +339,6 @@ paths:
       produces:
       - application/json
       responses:
-        "200":
-          description: Returns access token if no redirect is configured
-          schema:
-            $ref: '#/definitions/presenters.TokenResReq'
         "307":
           description: Redirects to frontend if redirect_url is provided and allowed
         "400":
@@ -382,10 +378,19 @@ paths:
     get:
       consumes:
       - application/json
-      description: Initiates Yandex OAuth login (not implemented)
+      description: Initiates Yandex OAuth login. Builds a signed state token and redirects
+        to Yandex.
+      parameters:
+      - description: Frontend URL to redirect after callback (must be allowlisted)
+        in: query
+        name: redirect_url
+        required: true
+        type: string
       produces:
       - application/json
-      responses: {}
+      responses:
+        "307":
+          description: Temporary Redirect
       summary: Yandex OAuth login
       tags:
       - OAuth
@@ -393,10 +398,32 @@ paths:
     get:
       consumes:
       - application/json
-      description: Handles Yandex OAuth callback (not implemented)
+      description: Handles Yandex OAuth callback, validates signed state, issues tokens
+        and sets refresh token cookie.
+      parameters:
+      - description: Signed OAuth state
+        in: query
+        name: state
+        required: true
+        type: string
+      - description: OAuth authorization code
+        in: query
+        name: code
+        required: true
+        type: string
       produces:
       - application/json
-      responses: {}
+      responses:
+        "307":
+          description: Redirects to frontend if redirect_url is provided and allowed
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/presenters.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/presenters.ErrorResponse'
       summary: Yandex OAuth callback
       tags:
       - OAuth

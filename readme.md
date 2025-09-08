@@ -1,11 +1,11 @@
-﻿# LiveisFPV ID (SSO API)
+# LiveisFPV ID (SSO API)
 
 Single Sign-On and authentication service written in Go. Provides user registration and login, JWT access/refresh tokens, Redis-backed sessions and token blocklist, email confirmation, and OAuth 2.0 login via Google. HTTP API is documented with Swagger; core settings (domain/ports/CORS/redirects) are configured via environment variables.
 
 - Language: Go 1.24
 - HTTP: Gin
 - Auth: JWT (HS256), refresh sessions in Redis, token blocklist by JTI
-- OAuth: Google (OIDC userinfo), multi-frontend redirects
+- OAuth: Google (OIDC userinfo) and Yandex, multi-frontend redirects
 - Storage: PostgreSQL (users), Redis (sessions, blocklist)
 - Docs: Swagger UI at `/swagger/index.html`
 
@@ -23,7 +23,7 @@ Steps:
    - `JWT_SECRET_KEY=change_me`
    - `ALLOWED_CORS_ORIGINS=http://localhost:5173,http://localhost:8080`
    - `ALLOWED_REDIRECT_URLS=http://localhost:5173`
-   - Google OAuth credentials if using OAuth
+   - Google/Yandex OAuth credentials if using OAuth
 3) Start services:
    - `docker compose up --build`
 4) Open Swagger UI:
@@ -57,8 +57,8 @@ Email (for confirmations):
 
 JWT:
 - `JWT_SECRET_KEY`: Secret key used to sign tokens
-- `ACCESS_TOKEN_TTL`: Access token lifetime (supports `s`, `m`, `h`, `d`, `mo`) — e.g. `15m`
-- `REFRESH_TOKEN_TTL`: Refresh token lifetime — e.g. `7d`
+- `ACCESS_TOKEN_TTL`: Access token lifetime (supports `s`, `m`, `h`, `d`, `mo`) - e.g. `15m`
+- `REFRESH_TOKEN_TTL`: Refresh token lifetime - e.g. `7d`
 
 Cookies:
 - `COOKIE_PATH` (default `/`)
@@ -74,41 +74,44 @@ gRPC (scaffolding present, not started by default):
 HTTP:
 - `HTTP_PORT` (default `8080`)
 
-OAuth (Google):
+OAuth (Google/Yandex):
 - `GOOGLE_CLIENT_ID`
 - `GOOGLE_CLIENT_SECRET`
+- `YANDEX_CLIENT_ID`, `YANDEX_CLIENT_SECRET`
 
-Tip: If you set an env var to an empty string (e.g. `DOMAIN=`) the library treats it as “set”, so env-default will not apply. Set a real value or remove the variable.
+Tip: If you set an env var to an empty string (e.g. `DOMAIN=`) the library treats it as set, so env-default will not apply. Set a real value or remove the variable.
 
 ## Endpoints (HTTP)
 
 Base path: `/api`
 
 Auth:
-- `POST /api/auth/create` — Register user; sends email confirmation.
-- `GET  /api/auth/confirm-email?token=...` — Confirm email.
-- `POST /api/auth/login` — Login; returns tokens and sets refresh cookie.
-- `POST /api/auth/refresh` — Issue new tokens by refresh cookie; sets new cookie.
-- `POST /api/auth/logout` — Logout; deletes session and clears cookie.
-- `GET  /api/auth/authenticate` — Return current user by access token.
-- `GET  /api/auth/validate` — Validate access token only.
+- `POST /api/auth/create` - Register user; sends email confirmation.
+- `GET  /api/auth/confirm-email?token=...` - Confirm email.
+- `POST /api/auth/login` - Login; returns tokens and sets refresh cookie.
+- `POST /api/auth/refresh` - Issue new tokens by refresh cookie; sets new cookie.
+- `POST /api/auth/logout` - Logout; deletes session and clears cookie.
+- `GET  /api/auth/authenticate` - Return current user by access token.
+- `GET  /api/auth/validate` - Validate access token only.
 
 OAuth:
-- `GET /api/oauth/google?redirect_url=<frontend>` — Start Google OAuth. Saves state cookie (and optional redirect_url if allowed) and redirects to Google.
-- `GET /api/oauth/google/callback?code=...&state=...` — Callback. Creates session, sets refresh cookie and either:
+- `GET /api/oauth/google?redirect_url=<frontend>` - Start Google OAuth. Saves state cookie (and optional redirect_url if allowed) and redirects to Google.
+- `GET /api/oauth/google/callback?code=...&state=...` - Callback. Creates session, sets refresh cookie and either:
   - Redirects (307) to allowed `redirect_url` (if provided/allowed), or
   - Returns JSON with `{ "error": "..." }`.
 
-Yandex/VK routes exist but currently return “Not Implemented”.
+Yandex/VK routes exist but currently return "Not Implemented".
 
-## OAuth Notes (Google)
+## OAuth Notes
 
-- Uses Google OIDC userinfo; user identifier is `sub` (falls back to `id` when present). Default scopes include `openid`.
+- Signed state (JWT) with nonce and optional redirect_url is used for Google and Yandex. State is validated in callback; nonce is stored in `oauth_state` cookie.
+- Google: OIDC userinfo; primary id is `sub` (fallback to `id`). Scopes include `openid`, `userinfo.profile`, `userinfo.email`.
+- Yandex: userinfo from https://login.yandex.ru/info?format=json with `login:email` and `login:info` scopes.
 - Multi-frontend flow:
-  - Frontend calls `/api/oauth/google?redirect_url=<encoded URL>`.
-  - The backend validates redirect_url against `ALLOWED_REDIRECT_URLS`, stores it in a temporary cookie, and redirects to Google.
-  - After callback, backend sets the refresh cookie and redirects (307) to the approved redirect_url.
-  - Frontend calls `/api/auth/refresh` with `credentials: 'include'` to obtain an access_token.
+  - Frontend calls `/api/oauth/{provider}?redirect_url=<encoded URL>`.
+  - Backend validates redirect_url against `ALLOWED_REDIRECT_URLS`, embeds it into the signed state and redirects to provider.
+  - After callback, backend sets the refresh cookie and redirects (307) to that redirect_url or returns JSON with access token.
+  - Frontend calls `/api/auth/refresh` with credentials: include to obtain an access_token.
 
 ## Swagger
 
@@ -154,12 +157,12 @@ Swagger dev:
 ## VPS Deployment (Makefile)
 
 Run these commands directly on the VPS in the repo directory:
-- `make deploy` — build and start (detached)
-- `make logs` — tail logs
-- `make down` — stop stack
-- `make rebuild` — rebuild without cache and start
-- `make restart` — restart only `core` service
-- `make migrate` — run migrator one-off (optional)
+- `make deploy` - build and start (detached)
+- `make logs` - tail logs
+- `make down` - stop stack
+- `make rebuild` - rebuild without cache and start
+- `make restart` - restart only `core` service
+- `make migrate` - run migrator one-off (optional)
 - If you use Compose v2 plugin, run with `DC="docker compose"`, e.g.: `make deploy DC="docker compose"`
 
 ## Security & Deployment Notes
@@ -171,8 +174,8 @@ Run these commands directly on the VPS in the repo directory:
 
 ## Troubleshooting
 
-- “Server is running on :8080”: `DOMAIN` is empty. When env var is present but empty, default doesn’t apply; set `DOMAIN=localhost` (or remove var) so default works.
-- “no allowed CORS origins configured”: set `ALLOWED_CORS_ORIGINS` in `.env` (comma-separated) and restart.
+- "Server is running on :8080": `DOMAIN` is empty. When env var is present but empty, default doesn't apply; set `DOMAIN=localhost` (or remove var) so default works.
+- "no allowed CORS origins configured": set `ALLOWED_CORS_ORIGINS` in `.env` (comma-separated) and restart.
 - OAuth callback shows backend page instead of redirect: pass `redirect_url` and allow it in `ALLOWED_REDIRECT_URLS`.
 - CORS or cookies not working: ensure origin is in `ALLOWED_CORS_ORIGINS` and frontend requests use `credentials: 'include'`. For cross-site cookies you may need `Secure` and `SameSite=None`.
 - Email not sent: verify SMTP settings and network egress.

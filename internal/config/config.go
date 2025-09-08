@@ -13,6 +13,7 @@ type Config struct {
     JWTConfig         JWTConfig
     CookieConfig      CookieConfig
     OauthGoogleConfig OauthGoogleConfig
+    OauthYandexConfig OauthYandexConfig
     EmailConfig       EmailConfig
     Domain            string `env:"DOMAIN" env-default:"localhost"`
     AllowedCORSOrigins   []string `env:"ALLOWED_CORS_ORIGINS" env-separator:","`
@@ -78,8 +79,13 @@ type HTTPServerConfig struct {
 }
 
 type OauthGoogleConfig struct {
-	ClientID     string `env:"GOOGLE_CLIENT_ID" env-required:"true"`
-	ClientSecret string `env:"GOOGLE_CLIENT_SECRET" env-required:"true"`
+    ClientID     string `env:"GOOGLE_CLIENT_ID" env-required:"true"`
+    ClientSecret string `env:"GOOGLE_CLIENT_SECRET" env-required:"true"`
+}
+
+type OauthYandexConfig struct {
+    ClientID     string `env:"YANDEX_CLIENT_ID" env-required:"true"`
+    ClientSecret string `env:"YANDEX_CLIENT_SECRET" env-required:"true"`
 }
 
 func MustLoadConfig() (*Config, error) {

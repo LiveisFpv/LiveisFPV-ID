@@ -13,6 +13,7 @@ type App struct {
     Config             *config.Config
     AuthService        service.AuthService
     OauthGoogleService oauth.OauthGoogleService
+    OauthYandexService oauth.OauthYandexService
     OAuthService       service.OAuthService
     EmailService       service.EmailService
     JWTService         service.JWTService
@@ -32,11 +33,13 @@ func NewApp(
 	SessionService := service.NewSessionService(SessionRepository, TokenBlocklist, JWTService, Logger)
 	AuthService := service.NewAuthService(JWTService, EmailService, SessionService, UserRepository, Logger)
     OauthGoogleService := oauth.NewOAuthGoogleService(UserRepository, cfg, Logger)
-    OAuthService := service.NewOAuthService(OauthGoogleService, JWTService, SessionService, UserRepository, Logger, cfg.JWTConfig.SecretKey, cfg.AllowedRedirectURLs)
+    OauthYandexService := oauth.NewOAuthYandexService(UserRepository, cfg, Logger)
+    OAuthService := service.NewOAuthService(OauthGoogleService, OauthYandexService, JWTService, SessionService, UserRepository, Logger, cfg.JWTConfig.SecretKey, cfg.AllowedRedirectURLs)
     return &App{
         Config:             cfg,
         AuthService:        AuthService,
         OauthGoogleService: OauthGoogleService,
+        OauthYandexService: OauthYandexService,
         OAuthService:       OAuthService,
         EmailService:       EmailService,
         JWTService:         JWTService,
@@ -44,3 +47,5 @@ func NewApp(
         Logger:             Logger,
     }
 }
+
+

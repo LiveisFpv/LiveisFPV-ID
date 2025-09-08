@@ -409,12 +409,6 @@ const docTemplate = `{
                     }
                 ],
                 "responses": {
-                    "200": {
-                        "description": "Returns access token if no redirect is configured",
-                        "schema": {
-                            "$ref": "#/definitions/presenters.TokenResReq"
-                        }
-                    },
                     "307": {
                         "description": "Redirects to frontend if redirect_url is provided and allowed"
                     },
@@ -467,7 +461,7 @@ const docTemplate = `{
         },
         "/oauth/yandex": {
             "get": {
-                "description": "Initiates Yandex OAuth login (not implemented)",
+                "description": "Initiates Yandex OAuth login. Builds a signed state token and redirects to Yandex.",
                 "consumes": [
                     "application/json"
                 ],
@@ -478,12 +472,25 @@ const docTemplate = `{
                     "OAuth"
                 ],
                 "summary": "Yandex OAuth login",
-                "responses": {}
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Frontend URL to redirect after callback (must be allowlisted)",
+                        "name": "redirect_url",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "307": {
+                        "description": "Temporary Redirect"
+                    }
+                }
             }
         },
         "/oauth/yandex/callback": {
             "get": {
-                "description": "Handles Yandex OAuth callback (not implemented)",
+                "description": "Handles Yandex OAuth callback, validates signed state, issues tokens and sets refresh token cookie.",
                 "consumes": [
                     "application/json"
                 ],
@@ -494,7 +501,39 @@ const docTemplate = `{
                     "OAuth"
                 ],
                 "summary": "Yandex OAuth callback",
-                "responses": {}
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Signed OAuth state",
+                        "name": "state",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "OAuth authorization code",
+                        "name": "code",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "307": {
+                        "description": "Redirects to frontend if redirect_url is provided and allowed"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/presenters.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/presenters.ErrorResponse"
+                        }
+                    }
+                }
             }
         }
     },

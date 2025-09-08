@@ -399,7 +399,6 @@ func OauthGoogleLogin(ctx *gin.Context, a *app.App) {
 // @Produce json
 // @Param state query string true "Signed OAuth state"
 // @Param code query string true "OAuth authorization code"
-// @Success 200 {object} presenters.TokenResReq "Returns access token if no redirect is configured"
 // @Success 307 "Redirects to frontend if redirect_url is provided and allowed"
 // @Failure 400 {object} presenters.ErrorResponse
 // @Failure 500 {object} presenters.ErrorResponse
@@ -440,24 +439,68 @@ func OauthGoogleCallback(ctx *gin.Context, a *app.App) {
 
 // OauthYandexLogin
 // @Summary Yandex OAuth login
-// @Description Initiates Yandex OAuth login (not implemented)
+// @Description Initiates Yandex OAuth login. Builds a signed state token and redirects to Yandex.
 // @Tags OAuth
 // @Accept json
 // @Produce json
+// @Param redirect_url query string true "Frontend URL to redirect after callback (must be allowlisted)"
+// @Success 307
 // @Router /oauth/yandex [get]
 func OauthYandexLogin(ctx *gin.Context, a *app.App) {
-	ctx.JSON(http.StatusNotImplemented, presenters.Error(fmt.Errorf("yandex oauth not implemented")))
+	requested := ctx.Query("redirect_url")
+	nonce, url, err := a.OAuthService.StartYandexLogin(ctx, requested)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, presenters.Error(fmt.Errorf("failed to start oauth: %w", err)))
+		return
+	}
+	a.Logger.Infoln("Redirecting to Yandex OAuth URL:", url)
+	cookieCfg := a.Config.CookieConfig
+	ctx.SetCookie("oauth_state", nonce, int((5 * time.Minute).Seconds()), cookieCfg.Path, cookieCfg.Domain, cookieCfg.Secure, cookieCfg.HttpOnly)
+	ctx.Redirect(http.StatusTemporaryRedirect, url)
 }
 
 // OauthYandexCallback
+// OauthYandexCallback
 // @Summary Yandex OAuth callback
-// @Description Handles Yandex OAuth callback (not implemented)
+// @Description Handles Yandex OAuth callback, validates signed state, issues tokens and sets refresh token cookie.
 // @Tags OAuth
 // @Accept json
 // @Produce json
+// @Param state query string true "Signed OAuth state"
+// @Param code query string true "OAuth authorization code"
+// @Success 307 "Redirects to frontend if redirect_url is provided and allowed"
+// @Failure 400 {object} presenters.ErrorResponse
+// @Failure 500 {object} presenters.ErrorResponse
 // @Router /oauth/yandex/callback [get]
 func OauthYandexCallback(ctx *gin.Context, a *app.App) {
-	ctx.JSON(http.StatusNotImplemented, presenters.Error(fmt.Errorf("yandex oauth not implemented")))
+	state := ctx.Query("state")
+	cookieState, _ := ctx.Cookie("oauth_state")
+	code := ctx.Query("code")
+	if code == "" {
+		ctx.JSON(http.StatusBadRequest, presenters.Error(fmt.Errorf("missing code")))
+		return
+	}
+	tokens, redirectURL, _, err := a.OAuthService.HandleYandexCallback(ctx, code, state, cookieState)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, presenters.Error(err))
+		return
+	}
+	cookieCfg := a.Config.CookieConfig
+	ctx.SetCookie(
+		"refresh_token",
+		tokens.RefreshToken,
+		int(cookieCfg.MaxAge.Duration().Seconds()),
+		cookieCfg.Path,
+		cookieCfg.Domain,
+		cookieCfg.Secure,
+		cookieCfg.HttpOnly,
+	)
+	ctx.SetCookie("oauth_state", "", -1, cookieCfg.Path, cookieCfg.Domain, cookieCfg.Secure, cookieCfg.HttpOnly)
+	if redirectURL != "" {
+		ctx.Redirect(http.StatusTemporaryRedirect, redirectURL)
+		return
+	}
+	ctx.JSON(http.StatusBadRequest, presenters.Error(fmt.Errorf("no redirect URL configured")))
 }
 
 // OauthVkLogin
