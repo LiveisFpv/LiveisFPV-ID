@@ -228,6 +228,29 @@ func (ur *userRepository) UpdateUser(ctx context.Context, user *domain.User) err
 	return nil
 }
 
+// SetOauthID sets the OAuth ID for a user based on the provider.
+// Supported providers are "google", "yandex", and "vk".
+func (ur *userRepository) SetOauthID(ctx context.Context, userID int, provider string, oauthID string) error {
+	var query string
+	switch provider {
+	case "google":
+		query = "UPDATE users SET google_id = $1 WHERE id = $2 AND is_active = true"
+	case "yandex":
+		query = "UPDATE users SET yandex_id = $1 WHERE id = $2 AND is_active = true"
+	case "vk":
+		query = "UPDATE users SET vk_id = $1 WHERE id = $2 AND is_active = true"
+	default:
+		return fmt.Errorf("unsupported provider: %s", provider)
+	}
+
+	_, err := ur.db.Exec(ctx, query, oauthID, userID)
+	if err != nil {
+		return fmt.Errorf("failed to set %s ID: %w", provider, err)
+	}
+
+	return nil
+}
+
 func (ur *userRepository) CreateUser(ctx context.Context, user *domain.User) (int, error) {
 	query := `
         INSERT INTO users (first_name, last_name, email, pass_hash, google_id, yandex_id, vk_id, photo, email_confirmed)

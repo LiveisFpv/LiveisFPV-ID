@@ -92,7 +92,7 @@ func (gs *OAuthGoogleServiceImpl) GetUserDataFromGoogle(ctx context.Context, cod
 	googleID := userInfo.Sub
 	user, err := gs.userRepository.GetUserByGoogleID(ctx, googleID)
 	if err != nil {
-		gs.logger.Errorf("get user for google: %v", err)
+		gs.logger.Warnf("get user for google: %v", err)
 		if errors.Is(err, repository.ErrorUserNotFound) {
 			newUser := &domain.User{
 				GoogleID:       func() *string { id := googleID; return &id }(),
@@ -110,7 +110,11 @@ func (gs *OAuthGoogleServiceImpl) GetUserDataFromGoogle(ctx context.Context, cod
 			if user != nil && err == nil {
 				gs.logger.Infof("resolve user by email: %+v", user)
 				if user.GoogleID == nil || *user.GoogleID == "" {
-					user.GoogleID = newUser.GoogleID
+					err = gs.userRepository.SetOauthID(ctx, user.ID, "google", googleID)
+					if err != nil {
+						gs.logger.Errorf("error set google id: %v", err)
+						return nil, err
+					}
 					if user.FirstName == "" {
 						user.FirstName = newUser.FirstName
 					}

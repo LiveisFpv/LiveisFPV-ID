@@ -21,6 +21,7 @@ type UserRepository interface {
 	GetUserByYandexID(ctx context.Context, id string) (*domain.User, error)
 	GetUserByVkID(ctx context.Context, id string) (*domain.User, error)
 	UpdateUser(ctx context.Context, user *domain.User) error
+	SetOauthID(ctx context.Context, userID int, provider string, oauthID string) error
 	CreateUser(ctx context.Context, user *domain.User) (userID int, err error)
 	ConfirmEmail(ctx context.Context, userID int) error
 }
