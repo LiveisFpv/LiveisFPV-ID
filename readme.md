@@ -95,12 +95,16 @@ Auth:
 - `GET  /api/auth/validate` - Validate access token only.
 
 OAuth:
-- `GET /api/oauth/google?redirect_url=<frontend>` - Start Google OAuth. Saves state cookie (and optional redirect_url if allowed) and redirects to Google.
+- `GET /api/oauth/google?redirect_url=<frontend>` - Start Google OAuth. Saves state cookie (and redirect_url if allowed) and redirects to Google.
 - `GET /api/oauth/google/callback?code=...&state=...` - Callback. Creates session, sets refresh cookie and either:
   - Redirects (307) to allowed `redirect_url` (if provided/allowed), or
   - Returns JSON with `{ "error": "..." }`.
+- `GET /api/oauth/yandex?redirect_url=<frontend>` - Start Yandex OAuth. Saves state cookie (and redirect_url if allowed) and redirects to Yandex.
+- `GET /api/oauth/yandex/callback?code=...&state=...` - Callback. Creates session, sets refresh cookie and either:
+  - Redirects (307) to allowed `redirect_url` (if provided/allowed), or
+  - Returns JSON with `{ "error": "..." }`.
 
-Yandex/VK routes exist but currently return "Not Implemented".
+VK routes exist but currently return "Not Implemented".
 
 ## OAuth Notes
 
