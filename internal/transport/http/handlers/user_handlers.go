@@ -12,6 +12,32 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// setCookieWithConfig sets cookie with SameSite from config.
+func setCookieWithConfig(ctx *gin.Context, a *app.App, name, value string, maxAge int) {
+	cfg := a.Config.CookieConfig
+	http.SetCookie(ctx.Writer, &http.Cookie{
+		Name:     name,
+		Value:    value,
+		Path:     cfg.Path,
+		Domain:   cfg.Domain,
+		MaxAge:   maxAge,
+		HttpOnly: cfg.HttpOnly,
+		Secure:   cfg.Secure,
+		SameSite: func() http.SameSite {
+			switch cfgSame := cfg.SameSite; cfgSame {
+			case "None", "none":
+				return http.SameSiteNoneMode
+			case "Strict", "strict":
+				return http.SameSiteStrictMode
+			case "Lax", "lax":
+				fallthrough
+			default:
+				return http.SameSiteLaxMode
+			}
+		}(),
+	})
+}
+
 // Logout
 // @Summary Logout user
 // @Description Logs out the user by invalidating the refresh token and clearing the cookie
@@ -23,7 +49,6 @@ import (
 // @Failure 500 {object} presenters.ErrorResponse
 // @Router /auth/logout [post]
 func Logout(ctx *gin.Context, a *app.App) {
-	cookieCfg := a.Config.CookieConfig
 
 	refreshToken, err := ctx.Cookie("refresh_token")
 	if err != nil {
@@ -44,15 +69,7 @@ func Logout(ctx *gin.Context, a *app.App) {
 		return
 	}
 
-	ctx.SetCookie(
-		"refresh_token",
-		"",
-		-1,
-		cookieCfg.Path,
-		cookieCfg.Domain,
-		cookieCfg.Secure,
-		cookieCfg.HttpOnly,
-	)
+	setCookieWithConfig(ctx, a, "refresh_token", "", -1)
 
 	resp := presenters.TokenResReq{
 		AccessToken: "",
@@ -88,17 +105,7 @@ func Refresh(ctx *gin.Context, a *app.App) {
 		ctx.JSON(http.StatusUnauthorized, resp)
 		return
 	}
-	cookieCfg := a.Config.CookieConfig
-
-	ctx.SetCookie(
-		"refresh_token",
-		tokens.RefreshToken,
-		int(cookieCfg.MaxAge.Duration().Seconds()),
-		cookieCfg.Path,
-		cookieCfg.Domain,
-		cookieCfg.Secure,
-		cookieCfg.HttpOnly,
-	)
+	setCookieWithConfig(ctx, a, "refresh_token", tokens.RefreshToken, int(a.Config.CookieConfig.MaxAge.Duration().Seconds()))
 	resp := presenters.TokenResReq{
 		AccessToken: tokens.AccessToken,
 	}
@@ -306,17 +313,7 @@ func Login(ctx *gin.Context, a *app.App) {
 		ctx.JSON(http.StatusUnauthorized, resp)
 		return
 	}
-	cookieCfg := a.Config.CookieConfig
-
-	ctx.SetCookie(
-		"refresh_token",
-		tokens.RefreshToken,
-		int(cookieCfg.MaxAge.Duration().Seconds()),
-		cookieCfg.Path,
-		cookieCfg.Domain,
-		cookieCfg.Secure,
-		cookieCfg.HttpOnly,
-	)
+	setCookieWithConfig(ctx, a, "refresh_token", tokens.RefreshToken, int(a.Config.CookieConfig.MaxAge.Duration().Seconds()))
 	resp := presenters.TokenResReq{
 		AccessToken: tokens.AccessToken,
 	}
@@ -417,17 +414,9 @@ func OauthGoogleCallback(ctx *gin.Context, a *app.App) {
 		return
 	}
 
-	cookieCfg := a.Config.CookieConfig
-	ctx.SetCookie(
-		"refresh_token",
-		tokens.RefreshToken,
-		int(cookieCfg.MaxAge.Duration().Seconds()),
-		cookieCfg.Path,
-		cookieCfg.Domain,
-		cookieCfg.Secure,
-		cookieCfg.HttpOnly,
-	)
+	setCookieWithConfig(ctx, a, "refresh_token", tokens.RefreshToken, int(a.Config.CookieConfig.MaxAge.Duration().Seconds()))
 	// clear state cookie then redirect if present, else return tokens JSON
+	cookieCfg := a.Config.CookieConfig
 	ctx.SetCookie("oauth_state", "", -1, cookieCfg.Path, cookieCfg.Domain, cookieCfg.Secure, cookieCfg.HttpOnly)
 	if redirectURL != "" {
 		ctx.Redirect(http.StatusTemporaryRedirect, redirectURL)
@@ -485,16 +474,8 @@ func OauthYandexCallback(ctx *gin.Context, a *app.App) {
 		ctx.JSON(http.StatusBadRequest, presenters.Error(err))
 		return
 	}
+	setCookieWithConfig(ctx, a, "refresh_token", tokens.RefreshToken, int(a.Config.CookieConfig.MaxAge.Duration().Seconds()))
 	cookieCfg := a.Config.CookieConfig
-	ctx.SetCookie(
-		"refresh_token",
-		tokens.RefreshToken,
-		int(cookieCfg.MaxAge.Duration().Seconds()),
-		cookieCfg.Path,
-		cookieCfg.Domain,
-		cookieCfg.Secure,
-		cookieCfg.HttpOnly,
-	)
 	ctx.SetCookie("oauth_state", "", -1, cookieCfg.Path, cookieCfg.Domain, cookieCfg.Secure, cookieCfg.HttpOnly)
 	if redirectURL != "" {
 		ctx.Redirect(http.StatusTemporaryRedirect, redirectURL)

@@ -67,6 +67,7 @@ Cookies:
 - `COOKIE_HTTP_ONLY` (default `true`)
 - `COOKIE_MAX_AGE` (duration like `7d`)
 - Note: Cookie domain is taken from `DOMAIN`.
+- `COOKIE_SAME_SITE` (default `Lax`): one of `Lax`, `Strict`, `None`. For cross‑site flows (frontend on another origin), set `None` and ensure `COOKIE_SECURE=true`.
 
 gRPC (scaffolding present, not started by default):
 - `GRPC_PORT` (default `50051`)
@@ -116,7 +117,7 @@ VK routes exist but currently return "Not Implemented".
   - Frontend calls `/api/oauth/{provider}?redirect_url=<encoded URL>`.
   - Backend validates redirect_url against `ALLOWED_REDIRECT_URLS`, embeds it into the signed state and redirects to provider.
   - After callback, backend sets the refresh cookie and redirects (307) to that redirect_url or returns JSON with access token.
-  - Frontend calls `/api/auth/refresh` with credentials: include to obtain an access_token.
+  - Frontend calls `/api/auth/refresh` with `credentials: 'include'` to obtain an access_token.
 
 ## Swagger
 
@@ -201,6 +202,7 @@ Notes
 - Set `DOMAIN` to a registrable/public domain (or a parent like `.example.com` for subdomains) so cookies are scoped correctly.
 - Configure `ALLOWED_CORS_ORIGINS` and `ALLOWED_REDIRECT_URLS` to the exact frontends you use.
 - Set `PUBLIC_URL` to an https URL in production so OAuth callbacks and email links are correct.
+- Cross‑site setup (backend on domain, frontend on localhost/other domain): set `COOKIE_SAME_SITE=None`, `COOKIE_SECURE=true`, call backend over HTTPS with `credentials: 'include'`.
 
 ## Troubleshooting
 
@@ -213,3 +215,4 @@ Notes
 ## License
 
 Repository is licensed under the Apache 2.0 license. The terms of the license are detailed in LICENSE.
+

@@ -68,6 +68,7 @@ type CookieConfig struct {
 	Secure   bool                 `env:"COOKIE_SECURE" env-default:"false"`
 	HttpOnly bool                 `env:"COOKIE_HTTP_ONLY" env-default:"true"`
 	MaxAge   types.CustomDuration `env:"COOKIE_MAX_AGE" env-default:"7d"`
+	SameSite string               `env:"COOKIE_SAME_SITE" env-default:"Lax"`
 }
 
 type gRPCConfig struct {
