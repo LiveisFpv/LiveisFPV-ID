@@ -86,11 +86,6 @@ services:
     volumes:
       - ./certbot/conf:/etc/letsencrypt
       - ./certbot/www:/var/www/certbot
-    entrypoint: /bin/sh -c
-    # Usage examples (run as: docker compose run --rm certbot <args>):
-    # certonly --webroot -w /var/www/certbot -d ${DOMAIN} --email you@example.com --agree-tos -n
-    # renew --webroot -w /var/www/certbot
-    command: "echo 'Run with docker compose run --rm certbot <command>'"
         
   
   postgres:
