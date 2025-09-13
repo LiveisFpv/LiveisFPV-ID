@@ -127,6 +127,11 @@ VK routes exist but currently return "Not Implemented".
   1) `go install github.com/swaggo/swag/cmd/swag@latest`
   2) From repo root: `swag init -g cmd/main.go -o docs`
 
+Production access control:
+- `SWAGGER_ENABLED` (default `true`): set to `false` to completely disable Swagger UI in production.
+- `SWAGGER_USER` and `SWAGGER_PASSWORD` (both optional): if both are set, Swagger UI is protected with HTTP Basic Auth at `/swagger/*`. Example: `SWAGGER_USER=docs`, `SWAGGER_PASSWORD=verysecret`.
+- Recommended for prod: set `SWAGGER_ENABLED=true` and protect with Basic Auth, or set `SWAGGER_ENABLED=false` and expose docs only internally.
+
 ## Data & Migrations
 
 - Migrations live in `db/migrations`. A small migrator in `tools/migrator` runs at startup in Compose.

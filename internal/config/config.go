@@ -7,18 +7,21 @@ import (
 )
 
 type Config struct {
-    PostgresConfig    PostgresConfig
-    RedisConfig       RedisConfig
-    HttpServerConfig  HTTPServerConfig
-    JWTConfig         JWTConfig
-    CookieConfig      CookieConfig
-    OauthGoogleConfig OauthGoogleConfig
-    OauthYandexConfig OauthYandexConfig
-    EmailConfig       EmailConfig
-    Domain            string `env:"DOMAIN" env-default:"localhost"`
-    PublicURL         string `env:"PUBLIC_URL"`
-    AllowedCORSOrigins   []string `env:"ALLOWED_CORS_ORIGINS" env-separator:","`
-    AllowedRedirectURLs  []string `env:"ALLOWED_REDIRECT_URLS" env-separator:","`
+	PostgresConfig      PostgresConfig
+	RedisConfig         RedisConfig
+	HttpServerConfig    HTTPServerConfig
+	JWTConfig           JWTConfig
+	CookieConfig        CookieConfig
+	OauthGoogleConfig   OauthGoogleConfig
+	OauthYandexConfig   OauthYandexConfig
+	EmailConfig         EmailConfig
+	Domain              string   `env:"DOMAIN" env-default:"localhost"`
+	PublicURL           string   `env:"PUBLIC_URL"`
+	AllowedCORSOrigins  []string `env:"ALLOWED_CORS_ORIGINS" env-separator:","`
+	AllowedRedirectURLs []string `env:"ALLOWED_REDIRECT_URLS" env-separator:","`
+	SwaggerEnabled      bool     `env:"SWAGGER_ENABLED" env-default:"true"`
+	SwaggerUser         string   `env:"SWAGGER_USER"`
+	SwaggerPassword     string   `env:"SWAGGER_PASSWORD"`
 }
 
 type PostgresConfig struct {
@@ -81,13 +84,13 @@ type HTTPServerConfig struct {
 }
 
 type OauthGoogleConfig struct {
-    ClientID     string `env:"GOOGLE_CLIENT_ID" env-required:"true"`
-    ClientSecret string `env:"GOOGLE_CLIENT_SECRET" env-required:"true"`
+	ClientID     string `env:"GOOGLE_CLIENT_ID" env-required:"true"`
+	ClientSecret string `env:"GOOGLE_CLIENT_SECRET" env-required:"true"`
 }
 
 type OauthYandexConfig struct {
-    ClientID     string `env:"YANDEX_CLIENT_ID" env-required:"true"`
-    ClientSecret string `env:"YANDEX_CLIENT_SECRET" env-required:"true"`
+	ClientID     string `env:"YANDEX_CLIENT_ID" env-required:"true"`
+	ClientSecret string `env:"YANDEX_CLIENT_SECRET" env-required:"true"`
 }
 
 func MustLoadConfig() (*Config, error) {

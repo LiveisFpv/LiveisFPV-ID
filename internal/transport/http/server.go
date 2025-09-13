@@ -74,7 +74,17 @@ func NewHTTPServer(conf *config.Config, a *app.App) *Server {
 		AllowCredentials: true,
 	}))
 
-	s.app.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+    // Swagger route: enable conditionally and optionally protect with Basic Auth
+    if conf.SwaggerEnabled {
+        if conf.SwaggerUser != "" && conf.SwaggerPassword != "" {
+            authorized := s.app.Group("/swagger", gin.BasicAuth(gin.Accounts{
+                conf.SwaggerUser: conf.SwaggerPassword,
+            }))
+            authorized.GET("/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+        } else {
+            s.app.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+        }
+    }
 	// Register routes
 	MainRouter(s.app.Group("/api/auth"), a)
 	OauthRouter(s.app.Group("/api/oauth"), a)
