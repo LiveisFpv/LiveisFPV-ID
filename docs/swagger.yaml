@@ -10,6 +10,19 @@ definitions:
       access_token:
         type: string
     type: object
+  presenters.UserListResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/presenters.UserResponse'
+        type: array
+      limit:
+        type: integer
+      page:
+        type: integer
+      total:
+        type: integer
+    type: object
   presenters.UserLoginRequest:
     properties:
       login:
@@ -274,6 +287,56 @@ paths:
           schema:
             $ref: '#/definitions/presenters.ErrorResponse'
       summary: Update user
+      tags:
+      - User
+  /auth/users:
+    get:
+      consumes:
+      - application/json
+      description: Returns a paginated list of users with optional filtering
+      parameters:
+      - description: Search by first_name, last_name, email
+        in: query
+        name: q
+        type: string
+      - description: Filter by role
+        in: query
+        name: role
+        type: string
+      - description: Filter by email confirmation status
+        in: query
+        name: email_confirmed
+        type: boolean
+      - description: Filter by locale (e.g., ru)
+        in: query
+        name: locale
+        type: string
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: Page size
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/presenters.UserListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/presenters.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/presenters.ErrorResponse'
+      summary: List users
       tags:
       - User
   /auth/validate:

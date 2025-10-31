@@ -1,15 +1,17 @@
 package handlers
 
 import (
-	"authorization_service/internal/app"
-	"authorization_service/internal/domain"
-	"authorization_service/internal/service"
-	"authorization_service/internal/transport/http/presenters"
-	"fmt"
-	"net/http"
-	"time"
+    "authorization_service/internal/app"
+    "authorization_service/internal/domain"
+    "authorization_service/internal/service"
+    "authorization_service/internal/repository"
+    "authorization_service/internal/transport/http/presenters"
+    "fmt"
+    "net/http"
+    "strconv"
+    "time"
 
-	"github.com/gin-gonic/gin"
+    "github.com/gin-gonic/gin"
 )
 
 // setCookieWithConfig sets cookie with SameSite from config.
@@ -364,6 +366,96 @@ func CreateUser(ctx *gin.Context, a *app.App) {
 		Roles:          created.Roles,
 		Photo:          created.Photo,
 	})
+}
+
+// ListUsers
+// @Summary List users
+// @Description Returns a paginated list of users with optional filtering
+// @Tags User
+// @Accept json
+// @Produce json
+// @Param q query string false "Search by first_name, last_name, email"
+// @Param role query string false "Filter by role"
+// @Param email_confirmed query bool false "Filter by email confirmation status"
+// @Param locale query string false "Filter by locale (e.g., ru)"
+// @Param page query int false "Page number" default(1)
+// @Param limit query int false "Page size" default(20)
+// @Success 200 {object} presenters.UserListResponse
+// @Failure 400 {object} presenters.ErrorResponse
+// @Failure 500 {object} presenters.ErrorResponse
+// @Router /auth/users [get]
+func ListUsers(ctx *gin.Context, a *app.App) {
+    // Parse pagination
+    page := 1
+    limit := 20
+    if v := ctx.Query("page"); v != "" {
+        if p, err := strconv.Atoi(v); err == nil && p > 0 {
+            page = p
+        } else if err != nil {
+            ctx.JSON(http.StatusBadRequest, presenters.Error(fmt.Errorf("invalid page: %w", err)))
+            return
+        }
+    }
+    if v := ctx.Query("limit"); v != "" {
+        if l, err := strconv.Atoi(v); err == nil && l > 0 {
+            limit = l
+        } else if err != nil {
+            ctx.JSON(http.StatusBadRequest, presenters.Error(fmt.Errorf("invalid limit: %w", err)))
+            return
+        }
+    }
+
+    // Filters
+    filter := repository.UserListFilter{}
+    if q := ctx.Query("q"); q != "" {
+        filter.Query = q
+    }
+    if r := ctx.Query("role"); r != "" {
+        filter.Role = &r
+    }
+    if ec := ctx.Query("email_confirmed"); ec != "" {
+        switch ec {
+        case "true", "1", "yes", "on":
+            b := true
+            filter.EmailConfirmed = &b
+        case "false", "0", "no", "off":
+            b := false
+            filter.EmailConfirmed = &b
+        default:
+            ctx.JSON(http.StatusBadRequest, presenters.Error(fmt.Errorf("invalid email_confirmed value")))
+            return
+        }
+    }
+    if l := ctx.Query("locale"); l != "" {
+        filter.Locale = &l
+    }
+
+    users, total, err := a.AuthService.ListUsers(ctx, filter, page, limit)
+    if err != nil {
+        ctx.JSON(http.StatusInternalServerError, presenters.Error(fmt.Errorf("list users failed: %w", err)))
+        return
+    }
+
+    // Map to presenter
+    items := make([]presenters.UserResponse, 0, len(users))
+    for _, u := range users {
+        items = append(items, presenters.UserResponse{
+            FirstName:      u.FirstName,
+            LastName:       u.LastName,
+            Email:          u.Email,
+            EmailConfirmed: u.EmailConfirmed,
+            LocaleType:     u.LocaleType,
+            Roles:          u.Roles,
+            Photo:          u.Photo,
+        })
+    }
+
+    ctx.JSON(http.StatusOK, presenters.UserListResponse{
+        Items: items,
+        Total: total,
+        Page:  page,
+        Limit: limit,
+    })
 }
 
 // OauthGoogleLogin

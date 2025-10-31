@@ -7,6 +7,8 @@ import (
 	"errors"
 	"fmt"
 
+	"strings"
+
 	"github.com/jackc/pgx/v5"
 )
 
@@ -208,8 +210,8 @@ func (ur *userRepository) GetUserByVkID(ctx context.Context, id string) (*domain
 func (ur *userRepository) UpdateUser(ctx context.Context, user *domain.User) error {
 	query := `
         UPDATE users
-        SET first_name = $1, last_name = $2, email = $3, photo = $4, roles = $5, locale = $6
-        WHERE id = $7 AND is_active = true
+        SET first_name = $1, last_name = $2, email = $3, photo = $4, roles = $5, locale = $6, password = $7
+        WHERE id = $8 AND is_active = true
     `
 
 	_, err := ur.db.Exec(ctx, query,
@@ -219,6 +221,7 @@ func (ur *userRepository) UpdateUser(ctx context.Context, user *domain.User) err
 		user.Photo,
 		user.Roles,
 		user.LocaleType,
+		user.Password,
 		user.ID,
 	)
 	if err != nil {
@@ -289,6 +292,107 @@ func (ur *userRepository) ConfirmEmail(ctx context.Context, userID int) error {
 	if err != nil {
 		return fmt.Errorf("failed to confirm email: %w", err)
 	}
-
 	return nil
+}
+
+// ListUsers returns users matching filter with pagination and total count
+func (ur *userRepository) ListUsers(ctx context.Context, filter repository.UserListFilter, page, limit int) ([]*domain.User, int, error) {
+	if page <= 0 {
+		page = 1
+	}
+	if limit <= 0 {
+		limit = 20
+	}
+	if limit > 100 {
+		limit = 100
+	}
+
+	where := []string{"is_active = true"}
+	args := []any{}
+
+	// q filter across first_name, last_name, email
+	if filter.Query != "" {
+		args = append(args, "%"+filter.Query+"%")
+		where = append(where, "(first_name ILIKE $"+fmt.Sprint(len(args))+" OR last_name ILIKE $"+fmt.Sprint(len(args))+" OR email ILIKE $"+fmt.Sprint(len(args))+")")
+	}
+	// role filter: value must be present in roles array
+	if filter.Role != nil {
+		args = append(args, *filter.Role)
+		where = append(where, "$"+fmt.Sprint(len(args))+" = ANY(roles)")
+	}
+	if filter.EmailConfirmed != nil {
+		args = append(args, *filter.EmailConfirmed)
+		where = append(where, "email_confirmed = $"+fmt.Sprint(len(args)))
+	}
+	if filter.Locale != nil {
+		args = append(args, *filter.Locale)
+		where = append(where, "locale = $"+fmt.Sprint(len(args)))
+	}
+
+	whereSQL := ""
+	if len(where) > 0 {
+		whereSQL = "WHERE " + strings.Join(where, " AND ")
+	}
+
+	// total count
+	countQuery := `
+        SELECT COUNT(*)
+        FROM users
+    ` + whereSQL
+
+	var total int
+	if err := ur.db.QueryRow(ctx, countQuery, args...).Scan(&total); err != nil {
+		return nil, 0, fmt.Errorf("failed to count users: %w", err)
+	}
+
+	// pagination
+	offset := (page - 1) * limit
+	argsWithPage := append([]any{}, args...)
+	argsWithPage = append(argsWithPage, limit, offset)
+
+	listQuery := `
+        SELECT id, first_name, last_name, email, email_confirmed, pass_hash,
+               google_id, yandex_id, vk_id, photo, roles, locale
+        FROM users
+    ` + whereSQL + `
+        ORDER BY created_at DESC
+        LIMIT $` + fmt.Sprint(len(args)+1) + ` OFFSET $` + fmt.Sprint(len(args)+2)
+
+	rows, err := ur.db.Query(ctx, listQuery, argsWithPage...)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to list users: %w", err)
+	}
+	defer rows.Close()
+
+	users := make([]*domain.User, 0)
+	for rows.Next() {
+		var u domain.User
+		var passHash []byte
+		if err := rows.Scan(
+			&u.ID,
+			&u.FirstName,
+			&u.LastName,
+			&u.Email,
+			&u.EmailConfirmed,
+			&passHash,
+			&u.GoogleID,
+			&u.YandexID,
+			&u.VkID,
+			&u.Photo,
+			&u.Roles,
+			&u.LocaleType,
+		); err != nil {
+			return nil, 0, fmt.Errorf("failed to scan user row: %w", err)
+		}
+		if len(passHash) > 0 {
+			s := string(passHash)
+			u.Password = &s
+		}
+		users = append(users, &u)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, 0, fmt.Errorf("rows error: %w", err)
+	}
+
+	return users, total, nil
 }

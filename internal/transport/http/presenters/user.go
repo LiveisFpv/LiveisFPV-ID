@@ -37,11 +37,18 @@ type TokenResReq struct {
 }
 
 type UserResponse struct {
-	FirstName      string   `json:"first_name"`
-	LastName       string   `json:"last_name"`
-	Email          string   `json:"email"`
-	EmailConfirmed bool     `json:"email_confirmed"`
-	LocaleType     *string  `json:"locale_type"`
-	Roles          []string `json:"roles"`
-	Photo          *string  `json:"photo"`
+    FirstName      string   `json:"first_name"`
+    LastName       string   `json:"last_name"`
+    Email          string   `json:"email"`
+    EmailConfirmed bool     `json:"email_confirmed"`
+    LocaleType     *string  `json:"locale_type"`
+    Roles          []string `json:"roles"`
+    Photo          *string  `json:"photo"`
+}
+
+type UserListResponse struct {
+    Items []UserResponse `json:"items"`
+    Total int            `json:"total"`
+    Page  int            `json:"page"`
+    Limit int            `json:"limit"`
 }

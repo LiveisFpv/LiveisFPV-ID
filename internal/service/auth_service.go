@@ -16,18 +16,20 @@ var (
 )
 
 type AuthService interface {
-	Login(ctx context.Context, email, password string) (*domain.UserTokens, error)
-	Logout(ctx context.Context, refreshToken string) error
-	Refresh(ctx context.Context, refreshToken string) (*domain.UserTokens, error)
-	Authenticate(ctx context.Context, accessToken string) (*domain.User, error)
-	Validate(ctx context.Context, accessToken string) (int, error)
-	CreateUser(ctx context.Context, user *domain.User) (*domain.User, error)
-	UpdateUser(ctx context.Context, accessToken string, user *domain.User) (*domain.User, error)
-	ConfirmEmail(ctx context.Context, token string) (int, error)
-	SendEmailConfirmation(ctx context.Context, userID int, email string) error
-	GetUserByID(ctx context.Context, userID int) (*domain.User, error)
-	GetUserByEmail(ctx context.Context, email string) (*domain.User, error)
-	DeleteSession(ctx context.Context, refresh_token string) error
+    Login(ctx context.Context, email, password string) (*domain.UserTokens, error)
+    Logout(ctx context.Context, refreshToken string) error
+    Refresh(ctx context.Context, refreshToken string) (*domain.UserTokens, error)
+    Authenticate(ctx context.Context, accessToken string) (*domain.User, error)
+    Validate(ctx context.Context, accessToken string) (int, error)
+    CreateUser(ctx context.Context, user *domain.User) (*domain.User, error)
+    UpdateUser(ctx context.Context, accessToken string, user *domain.User) (*domain.User, error)
+    ConfirmEmail(ctx context.Context, token string) (int, error)
+    SendEmailConfirmation(ctx context.Context, userID int, email string) error
+    GetUserByID(ctx context.Context, userID int) (*domain.User, error)
+    GetUserByEmail(ctx context.Context, email string) (*domain.User, error)
+    DeleteSession(ctx context.Context, refresh_token string) error
+    // ListUsers returns a page of users matching filter and total count
+    ListUsers(ctx context.Context, filter repository.UserListFilter, page, limit int) ([]*domain.User, int, error)
 }
 
 type authService struct {
@@ -131,11 +133,11 @@ func (a *authService) CreateUser(ctx context.Context, user *domain.User) (*domai
 		return nil, fmt.Errorf("failed to get created user by ID %d: %w", userID, err)
 	}
 
-    err = a.emailService.SendEmailConfirmation(ctx, userID, user.Email)
+	err = a.emailService.SendEmailConfirmation(ctx, userID, user.Email)
 
-    if err != nil {
-        a.logger.WithError(err).Errorf("failed to send email confirmation: user_id=%d email=%s", userID, user.Email)
-    }
+	if err != nil {
+		a.logger.WithError(err).Errorf("failed to send email confirmation: user_id=%d email=%s", userID, user.Email)
+	}
 	return user, nil
 }
 
@@ -314,4 +316,13 @@ func (a *authService) UpdateUser(ctx context.Context, accessToken string, userDa
 		return nil, fmt.Errorf("failed to update user: %w", err)
 	}
 	return user, nil
+}
+
+// ListUsers implements AuthService.
+func (a *authService) ListUsers(ctx context.Context, filter repository.UserListFilter, page, limit int) ([]*domain.User, int, error) {
+    users, total, err := a.userRepository.ListUsers(ctx, filter, page, limit)
+    if err != nil {
+        return nil, 0, fmt.Errorf("failed to list users: %w", err)
+    }
+    return users, total, nil
 }
