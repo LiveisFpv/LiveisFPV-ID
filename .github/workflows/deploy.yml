@@ -1,4 +1,4 @@
-name: Deploy Authorization_Service
+name: Deploy LiveisFPV-ID
 
 on:
   push:
@@ -23,7 +23,7 @@ jobs:
       - name: Deploy to VPS
         run: |
           ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
-            cd ~/authorization_service
+            cd ~/LiveisFPV-ID
             git pull origin main
             docker compose build
             docker compose down
