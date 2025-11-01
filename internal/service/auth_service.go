@@ -4,8 +4,11 @@ import (
 	"authorization_service/internal/domain"
 	"authorization_service/internal/repository"
 	"context"
+	"crypto/rand"
 	"errors"
 	"fmt"
+	"math/big"
+	"strings"
 
 	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
@@ -16,20 +19,22 @@ var (
 )
 
 type AuthService interface {
-    Login(ctx context.Context, email, password string) (*domain.UserTokens, error)
-    Logout(ctx context.Context, refreshToken string) error
-    Refresh(ctx context.Context, refreshToken string) (*domain.UserTokens, error)
-    Authenticate(ctx context.Context, accessToken string) (*domain.User, error)
-    Validate(ctx context.Context, accessToken string) (int, error)
-    CreateUser(ctx context.Context, user *domain.User) (*domain.User, error)
-    UpdateUser(ctx context.Context, accessToken string, user *domain.User) (*domain.User, error)
-    ConfirmEmail(ctx context.Context, token string) (int, error)
-    SendEmailConfirmation(ctx context.Context, userID int, email string) error
-    GetUserByID(ctx context.Context, userID int) (*domain.User, error)
-    GetUserByEmail(ctx context.Context, email string) (*domain.User, error)
-    DeleteSession(ctx context.Context, refresh_token string) error
-    // ListUsers returns a page of users matching filter and total count
-    ListUsers(ctx context.Context, filter repository.UserListFilter, page, limit int) ([]*domain.User, int, error)
+	Login(ctx context.Context, email, password string) (*domain.UserTokens, error)
+	Logout(ctx context.Context, refreshToken string) error
+	Refresh(ctx context.Context, refreshToken string) (*domain.UserTokens, error)
+	Authenticate(ctx context.Context, accessToken string) (*domain.User, error)
+	Validate(ctx context.Context, accessToken string) (int, error)
+	CreateUser(ctx context.Context, user *domain.User) (*domain.User, error)
+	UpdateUser(ctx context.Context, accessToken string, user *domain.User) (*domain.User, error)
+	ConfirmEmail(ctx context.Context, token string) (int, error)
+	SendEmailConfirmation(ctx context.Context, userID int, email string) error
+	RequestPasswordReset(ctx context.Context, email string) error
+	ConfirmPasswordReset(ctx context.Context, token string) error
+	GetUserByID(ctx context.Context, userID int) (*domain.User, error)
+	GetUserByEmail(ctx context.Context, email string) (*domain.User, error)
+	DeleteSession(ctx context.Context, refresh_token string) error
+	// ListUsers returns a page of users matching filter and total count
+	ListUsers(ctx context.Context, filter repository.UserListFilter, page, limit int) ([]*domain.User, int, error)
 }
 
 type authService struct {
@@ -279,6 +284,77 @@ func (a *authService) SendEmailConfirmation(ctx context.Context, userID int, ema
 	return nil
 }
 
+// RequestPasswordReset sends a confirmation link to the provided email if the user exists.
+func (a *authService) RequestPasswordReset(ctx context.Context, email string) error {
+	email = strings.TrimSpace(email)
+	if email == "" {
+		return fmt.Errorf("email is required")
+	}
+
+	user, err := a.userRepository.GetUserByEmail(ctx, email)
+	if err != nil {
+		if errors.Is(err, repository.ErrorUserNotFound) {
+			a.logger.WithField("email", email).Debug("password reset requested for non-existent email")
+			return nil
+		}
+		return fmt.Errorf("failed to get user by email %s: %w", email, err)
+	}
+
+	if err := a.emailService.SendPasswordResetConfirmation(ctx, user.ID, user.Email); err != nil {
+		return fmt.Errorf("failed to send password reset confirmation: %w", err)
+	}
+	return nil
+}
+
+// ConfirmPasswordReset validates confirmation token, rotates the password, revokes sessions and emails the new password.
+func (a *authService) ConfirmPasswordReset(ctx context.Context, token string) error {
+	userID, tokenEmail, err := a.emailService.VerifyPasswordResetToken(ctx, token)
+	if err != nil {
+		return fmt.Errorf("failed to verify password reset token: %w", err)
+	}
+
+	user, err := a.userRepository.GetUserByID(ctx, userID)
+	if err != nil {
+		return fmt.Errorf("failed to get user by ID %d: %w", userID, err)
+	}
+	if user == nil {
+		return fmt.Errorf("user with ID %d not found", userID)
+	}
+
+	targetEmail := user.Email
+	if !strings.EqualFold(user.Email, tokenEmail) {
+		a.logger.WithFields(logrus.Fields{
+			"user_id":     userID,
+			"storedEmail": user.Email,
+			"tokenEmail":  tokenEmail,
+		}).Warn("password reset token email differs from stored email")
+	}
+
+	newPassword, err := generateRandomPassword(12, 16)
+	if err != nil {
+		return fmt.Errorf("failed to generate new password: %w", err)
+	}
+
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return fmt.Errorf("failed to hash new password: %w", err)
+	}
+
+	if err := a.userRepository.UpdatePassword(ctx, userID, string(hashedPassword)); err != nil {
+		return fmt.Errorf("failed to update user password: %w", err)
+	}
+
+	if err := a.sessionService.DeleteAllUserSessions(ctx, userID); err != nil {
+		a.logger.WithError(err).Warnf("failed to revoke sessions for user %d after password reset", userID)
+	}
+
+	if err := a.emailService.SendNewPassword(ctx, targetEmail, newPassword); err != nil {
+		return fmt.Errorf("failed to send new password email: %w", err)
+	}
+
+	return nil
+}
+
 // UpdateUser implements AuthService.
 func (a *authService) UpdateUser(ctx context.Context, accessToken string, userData *domain.User) (*domain.User, error) {
 	userID, err := a.jwtService.VerifyToken(ctx, accessToken, domain.AccessTokenType)
@@ -320,9 +396,37 @@ func (a *authService) UpdateUser(ctx context.Context, accessToken string, userDa
 
 // ListUsers implements AuthService.
 func (a *authService) ListUsers(ctx context.Context, filter repository.UserListFilter, page, limit int) ([]*domain.User, int, error) {
-    users, total, err := a.userRepository.ListUsers(ctx, filter, page, limit)
-    if err != nil {
-        return nil, 0, fmt.Errorf("failed to list users: %w", err)
-    }
-    return users, total, nil
+	users, total, err := a.userRepository.ListUsers(ctx, filter, page, limit)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to list users: %w", err)
+	}
+	return users, total, nil
+}
+
+func generateRandomPassword(minLength, maxLength int) (string, error) {
+	if minLength <= 0 || maxLength < minLength {
+		return "", fmt.Errorf("invalid password length bounds")
+	}
+
+	length := minLength
+	if maxLength > minLength {
+		diff := maxLength - minLength + 1
+		n, err := rand.Int(rand.Reader, big.NewInt(int64(diff)))
+		if err != nil {
+			return "", fmt.Errorf("failed to choose password length: %w", err)
+		}
+		length = minLength + int(n.Int64())
+	}
+
+	const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%^&*"
+	password := make([]byte, length)
+	for i := 0; i < length; i++ {
+		idx, err := rand.Int(rand.Reader, big.NewInt(int64(len(alphabet))))
+		if err != nil {
+			return "", fmt.Errorf("failed to generate password character: %w", err)
+		}
+		password[i] = alphabet[idx.Int64()]
+	}
+
+	return string(password), nil
 }

@@ -26,3 +26,9 @@ type EmailConfirmationClaims struct {
 	UserID int    `json:"user_id"`
 	Email  string `json:"email"`
 }
+
+type PasswordResetClaims struct {
+	jwt.RegisteredClaims
+	UserID int    `json:"user_id"`
+	Email  string `json:"email"`
+}

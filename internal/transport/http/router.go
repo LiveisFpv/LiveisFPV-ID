@@ -8,15 +8,17 @@ import (
 )
 
 func MainRouter(r *gin.RouterGroup, a *app.App) {
-    r.POST("/logout", func(ctx *gin.Context) { handlers.Logout(ctx, a) })
-    r.POST("/refresh", func(ctx *gin.Context) { handlers.Refresh(ctx, a) })
-    r.PUT("/update", func(ctx *gin.Context) { handlers.UpdateUser(ctx, a) })
-    r.GET("/confirm-email", func(ctx *gin.Context) { handlers.ConfirmEmail(ctx, a) })
-    r.POST("/login", func(ctx *gin.Context) { handlers.Login(ctx, a) })
-    r.POST("/create", func(ctx *gin.Context) { handlers.CreateUser(ctx, a) })
-    r.GET("/authenticate", func(ctx *gin.Context) { handlers.Authenticate(ctx, a) })
-    r.GET("/validate", func(ctx *gin.Context) { handlers.Validate(ctx, a) })
-    r.GET("/users", func(ctx *gin.Context) { handlers.ListUsers(ctx, a) })
+	r.POST("/logout", func(ctx *gin.Context) { handlers.Logout(ctx, a) })
+	r.POST("/refresh", func(ctx *gin.Context) { handlers.Refresh(ctx, a) })
+	r.PUT("/update", func(ctx *gin.Context) { handlers.UpdateUser(ctx, a) })
+	r.GET("/confirm-email", func(ctx *gin.Context) { handlers.ConfirmEmail(ctx, a) })
+	r.POST("/password-reset", func(ctx *gin.Context) { handlers.RequestPasswordReset(ctx, a) })
+	r.GET("/password-reset/confirm", func(ctx *gin.Context) { handlers.ConfirmPasswordReset(ctx, a) })
+	r.POST("/login", func(ctx *gin.Context) { handlers.Login(ctx, a) })
+	r.POST("/create", func(ctx *gin.Context) { handlers.CreateUser(ctx, a) })
+	r.GET("/authenticate", func(ctx *gin.Context) { handlers.Authenticate(ctx, a) })
+	r.GET("/validate", func(ctx *gin.Context) { handlers.Validate(ctx, a) })
+	r.GET("/users", func(ctx *gin.Context) { handlers.ListUsers(ctx, a) })
 }
 func OauthRouter(r *gin.RouterGroup, a *app.App) {
 	r.GET("/google", func(ctx *gin.Context) { handlers.OauthGoogleLogin(ctx, a) })

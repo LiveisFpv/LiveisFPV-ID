@@ -295,6 +295,19 @@ func (ur *userRepository) ConfirmEmail(ctx context.Context, userID int) error {
 	return nil
 }
 
+func (ur *userRepository) UpdatePassword(ctx context.Context, userID int, passwordHash string) error {
+	query := `
+        UPDATE users
+        SET pass_hash = $2
+        WHERE id = $1 AND is_active = true
+    `
+
+	if _, err := ur.db.Exec(ctx, query, userID, []byte(passwordHash)); err != nil {
+		return fmt.Errorf("failed to update password: %w", err)
+	}
+	return nil
+}
+
 // ListUsers returns users matching filter with pagination and total count
 func (ur *userRepository) ListUsers(ctx context.Context, filter repository.UserListFilter, page, limit int) ([]*domain.User, int, error) {
 	if page <= 0 {

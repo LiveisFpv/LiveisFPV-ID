@@ -5,6 +5,18 @@ definitions:
       error:
         type: string
     type: object
+  presenters.PasswordResetRequest:
+    properties:
+      email:
+        type: string
+    required:
+    - email
+    type: object
+  presenters.PasswordResetResponse:
+    properties:
+      message:
+        type: string
+    type: object
   presenters.TokenResReq:
     properties:
       access_token:
@@ -223,6 +235,65 @@ paths:
           schema:
             $ref: '#/definitions/presenters.ErrorResponse'
       summary: Logout user
+      tags:
+      - Auth
+  /auth/password-reset:
+    post:
+      consumes:
+      - application/json
+      description: Sends a password reset confirmation link to the email if it exists.
+      parameters:
+      - description: Password reset request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/presenters.PasswordResetRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/presenters.PasswordResetResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/presenters.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/presenters.ErrorResponse'
+      summary: Request password reset
+      tags:
+      - Auth
+  /auth/password-reset/confirm:
+    get:
+      consumes:
+      - application/json
+      description: Validates the reset token and emails a new password to the user.
+      parameters:
+      - description: Password reset token
+        in: query
+        name: token
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/presenters.PasswordResetResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/presenters.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/presenters.ErrorResponse'
+      summary: Confirm password reset
       tags:
       - Auth
   /auth/refresh:

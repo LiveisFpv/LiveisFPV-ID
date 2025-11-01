@@ -1,17 +1,18 @@
 package handlers
 
 import (
-    "authorization_service/internal/app"
-    "authorization_service/internal/domain"
-    "authorization_service/internal/service"
-    "authorization_service/internal/repository"
-    "authorization_service/internal/transport/http/presenters"
-    "fmt"
-    "net/http"
-    "strconv"
-    "time"
+	"authorization_service/internal/app"
+	"authorization_service/internal/domain"
+	"authorization_service/internal/repository"
+	"authorization_service/internal/service"
+	"authorization_service/internal/transport/http/presenters"
+	"errors"
+	"fmt"
+	"net/http"
+	"strconv"
+	"time"
 
-    "github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin"
 )
 
 // setCookieWithConfig sets cookie with SameSite from config.
@@ -291,6 +292,66 @@ func ConfirmEmail(ctx *gin.Context, a *app.App) {
 	ctx.Status(http.StatusOK)
 }
 
+// RequestPasswordReset
+// @Summary Request password reset
+// @Description Sends a password reset confirmation link to the email if it exists.
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Param request body presenters.PasswordResetRequest true "Password reset request"
+// @Success 200 {object} presenters.PasswordResetResponse
+// @Failure 400 {object} presenters.ErrorResponse
+// @Failure 500 {object} presenters.ErrorResponse
+// @Router /auth/password-reset [post]
+func RequestPasswordReset(ctx *gin.Context, a *app.App) {
+	var req presenters.PasswordResetRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, presenters.Error(fmt.Errorf("invalid request: %w", err)))
+		return
+	}
+
+	if err := a.AuthService.RequestPasswordReset(ctx, req.Email); err != nil {
+		ctx.JSON(http.StatusInternalServerError, presenters.Error(fmt.Errorf("password reset request failed: %w", err)))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, presenters.PasswordResetResponse{
+		Message: "If the email exists, a confirmation link has been sent.",
+	})
+}
+
+// ConfirmPasswordReset
+// @Summary Confirm password reset
+// @Description Validates the reset token and emails a new password to the user.
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Param token query string true "Password reset token"
+// @Success 200 {object} presenters.PasswordResetResponse
+// @Failure 400 {object} presenters.ErrorResponse
+// @Failure 500 {object} presenters.ErrorResponse
+// @Router /auth/password-reset/confirm [get]
+func ConfirmPasswordReset(ctx *gin.Context, a *app.App) {
+	token := ctx.Query("token")
+	if token == "" {
+		ctx.JSON(http.StatusBadRequest, presenters.Error(fmt.Errorf("missing token")))
+		return
+	}
+
+	if err := a.AuthService.ConfirmPasswordReset(ctx, token); err != nil {
+		if errors.Is(err, service.ErrInvalidPasswordResetToken) || errors.Is(err, service.ErrPasswordResetTokenExpired) {
+			ctx.JSON(http.StatusBadRequest, &presenters.ErrorResponse{Error: "invalid or expired token"})
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, presenters.Error(fmt.Errorf("password reset confirmation failed: %w", err)))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, presenters.PasswordResetResponse{
+		Message: "A new password has been sent to your email.",
+	})
+}
+
 // Login
 // @Summary Login user
 // @Description Logs in the user and returns access and refresh tokens
@@ -385,77 +446,77 @@ func CreateUser(ctx *gin.Context, a *app.App) {
 // @Failure 500 {object} presenters.ErrorResponse
 // @Router /auth/users [get]
 func ListUsers(ctx *gin.Context, a *app.App) {
-    // Parse pagination
-    page := 1
-    limit := 20
-    if v := ctx.Query("page"); v != "" {
-        if p, err := strconv.Atoi(v); err == nil && p > 0 {
-            page = p
-        } else if err != nil {
-            ctx.JSON(http.StatusBadRequest, presenters.Error(fmt.Errorf("invalid page: %w", err)))
-            return
-        }
-    }
-    if v := ctx.Query("limit"); v != "" {
-        if l, err := strconv.Atoi(v); err == nil && l > 0 {
-            limit = l
-        } else if err != nil {
-            ctx.JSON(http.StatusBadRequest, presenters.Error(fmt.Errorf("invalid limit: %w", err)))
-            return
-        }
-    }
+	// Parse pagination
+	page := 1
+	limit := 20
+	if v := ctx.Query("page"); v != "" {
+		if p, err := strconv.Atoi(v); err == nil && p > 0 {
+			page = p
+		} else if err != nil {
+			ctx.JSON(http.StatusBadRequest, presenters.Error(fmt.Errorf("invalid page: %w", err)))
+			return
+		}
+	}
+	if v := ctx.Query("limit"); v != "" {
+		if l, err := strconv.Atoi(v); err == nil && l > 0 {
+			limit = l
+		} else if err != nil {
+			ctx.JSON(http.StatusBadRequest, presenters.Error(fmt.Errorf("invalid limit: %w", err)))
+			return
+		}
+	}
 
-    // Filters
-    filter := repository.UserListFilter{}
-    if q := ctx.Query("q"); q != "" {
-        filter.Query = q
-    }
-    if r := ctx.Query("role"); r != "" {
-        filter.Role = &r
-    }
-    if ec := ctx.Query("email_confirmed"); ec != "" {
-        switch ec {
-        case "true", "1", "yes", "on":
-            b := true
-            filter.EmailConfirmed = &b
-        case "false", "0", "no", "off":
-            b := false
-            filter.EmailConfirmed = &b
-        default:
-            ctx.JSON(http.StatusBadRequest, presenters.Error(fmt.Errorf("invalid email_confirmed value")))
-            return
-        }
-    }
-    if l := ctx.Query("locale"); l != "" {
-        filter.Locale = &l
-    }
+	// Filters
+	filter := repository.UserListFilter{}
+	if q := ctx.Query("q"); q != "" {
+		filter.Query = q
+	}
+	if r := ctx.Query("role"); r != "" {
+		filter.Role = &r
+	}
+	if ec := ctx.Query("email_confirmed"); ec != "" {
+		switch ec {
+		case "true", "1", "yes", "on":
+			b := true
+			filter.EmailConfirmed = &b
+		case "false", "0", "no", "off":
+			b := false
+			filter.EmailConfirmed = &b
+		default:
+			ctx.JSON(http.StatusBadRequest, presenters.Error(fmt.Errorf("invalid email_confirmed value")))
+			return
+		}
+	}
+	if l := ctx.Query("locale"); l != "" {
+		filter.Locale = &l
+	}
 
-    users, total, err := a.AuthService.ListUsers(ctx, filter, page, limit)
-    if err != nil {
-        ctx.JSON(http.StatusInternalServerError, presenters.Error(fmt.Errorf("list users failed: %w", err)))
-        return
-    }
+	users, total, err := a.AuthService.ListUsers(ctx, filter, page, limit)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, presenters.Error(fmt.Errorf("list users failed: %w", err)))
+		return
+	}
 
-    // Map to presenter
-    items := make([]presenters.UserResponse, 0, len(users))
-    for _, u := range users {
-        items = append(items, presenters.UserResponse{
-            FirstName:      u.FirstName,
-            LastName:       u.LastName,
-            Email:          u.Email,
-            EmailConfirmed: u.EmailConfirmed,
-            LocaleType:     u.LocaleType,
-            Roles:          u.Roles,
-            Photo:          u.Photo,
-        })
-    }
+	// Map to presenter
+	items := make([]presenters.UserResponse, 0, len(users))
+	for _, u := range users {
+		items = append(items, presenters.UserResponse{
+			FirstName:      u.FirstName,
+			LastName:       u.LastName,
+			Email:          u.Email,
+			EmailConfirmed: u.EmailConfirmed,
+			LocaleType:     u.LocaleType,
+			Roles:          u.Roles,
+			Photo:          u.Photo,
+		})
+	}
 
-    ctx.JSON(http.StatusOK, presenters.UserListResponse{
-        Items: items,
-        Total: total,
-        Page:  page,
-        Limit: limit,
-    })
+	ctx.JSON(http.StatusOK, presenters.UserListResponse{
+		Items: items,
+		Total: total,
+		Page:  page,
+		Limit: limit,
+	})
 }
 
 // OauthGoogleLogin
