@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
 )
 
@@ -18,7 +19,7 @@ type EmailService interface {
 	GenerateEmailConfirmationToken(ctx context.Context, userID int, email string) (string, error)
 	VerifyEmailConfirmationToken(ctx context.Context, token string) (int, error)
 	SendPasswordResetConfirmation(ctx context.Context, userID int, email string) error
-	VerifyPasswordResetToken(ctx context.Context, token string) (int, string, error)
+	VerifyPasswordResetToken(ctx context.Context, token string) (int, string, string, time.Time, error)
 	SendNewPassword(ctx context.Context, email string, password string) error
 }
 
@@ -72,6 +73,7 @@ func (e *emailService) generatePasswordResetToken(ctx context.Context, userID in
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    e.domainURL,
 			Subject:   "password_reset",
+			ID:        uuid.NewString(),
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(7 * 24 * time.Hour)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 		},
@@ -147,7 +149,7 @@ func (e *emailService) SendPasswordResetConfirmation(ctx context.Context, userID
 }
 
 // VerifyPasswordResetToken validates the token embedded in the reset link.
-func (e *emailService) VerifyPasswordResetToken(ctx context.Context, token string) (int, string, error) {
+func (e *emailService) VerifyPasswordResetToken(ctx context.Context, token string) (int, string, string, time.Time, error) {
 	claims := &domain.PasswordResetClaims{}
 	parsedToken, err := jwt.ParseWithClaims(token, claims, func(t *jwt.Token) (any, error) {
 		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
@@ -156,18 +158,21 @@ func (e *emailService) VerifyPasswordResetToken(ctx context.Context, token strin
 		return []byte(e.jwtSecret), nil
 	})
 	if err != nil || !parsedToken.Valid {
-		return 0, "", ErrInvalidPasswordResetToken
+		return 0, "", "", time.Time{}, ErrInvalidPasswordResetToken
 	}
 	if claims.Subject != "password_reset" {
-		return 0, "", ErrInvalidPasswordResetToken
+		return 0, "", "", time.Time{}, ErrInvalidPasswordResetToken
 	}
 	if claims.Issuer != e.domainURL {
-		return 0, "", ErrInvalidPasswordResetToken
+		return 0, "", "", time.Time{}, ErrInvalidPasswordResetToken
 	}
 	if claims.ExpiresAt == nil || time.Now().After(claims.ExpiresAt.Time) {
-		return 0, "", ErrPasswordResetTokenExpired
+		return 0, "", "", time.Time{}, ErrPasswordResetTokenExpired
 	}
-	return claims.UserID, claims.Email, nil
+	if claims.ID == "" {
+		return 0, "", "", time.Time{}, ErrInvalidPasswordResetToken
+	}
+	return claims.UserID, claims.Email, claims.ID, claims.ExpiresAt.Time, nil
 }
 
 // SendNewPassword emails a freshly generated password to the user.

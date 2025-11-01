@@ -10,15 +10,15 @@ import (
 )
 
 type App struct {
-    Config             *config.Config
-    AuthService        service.AuthService
-    OauthGoogleService oauth.OauthGoogleService
-    OauthYandexService oauth.OauthYandexService
-    OAuthService       service.OAuthService
-    EmailService       service.EmailService
-    JWTService         service.JWTService
-    SessionService     service.SessionService
-    Logger             *logrus.Logger
+	Config             *config.Config
+	AuthService        service.AuthService
+	OauthGoogleService oauth.OauthGoogleService
+	OauthYandexService oauth.OauthYandexService
+	OAuthService       service.OAuthService
+	EmailService       service.EmailService
+	JWTService         service.JWTService
+	SessionService     service.SessionService
+	Logger             *logrus.Logger
 }
 
 func NewApp(
@@ -29,27 +29,25 @@ func NewApp(
 	Logger *logrus.Logger,
 ) *App {
 	JWTService := service.NewJWTService(&cfg.JWTConfig, TokenBlocklist, Logger)
-    baseURL := cfg.PublicURL
-    if baseURL == "" {
-        baseURL = "http://" + cfg.Domain + ":" + cfg.HttpServerConfig.Port
-    }
-    EmailService := service.NewEmailService(&cfg.EmailConfig, baseURL, Logger)
+	baseURL := cfg.PublicURL
+	if baseURL == "" {
+		baseURL = "http://" + cfg.Domain + ":" + cfg.HttpServerConfig.Port
+	}
+	EmailService := service.NewEmailService(&cfg.EmailConfig, baseURL, Logger)
 	SessionService := service.NewSessionService(SessionRepository, TokenBlocklist, JWTService, Logger)
-	AuthService := service.NewAuthService(JWTService, EmailService, SessionService, UserRepository, Logger)
-    OauthGoogleService := oauth.NewOAuthGoogleService(UserRepository, cfg, Logger)
-    OauthYandexService := oauth.NewOAuthYandexService(UserRepository, cfg, Logger)
-    OAuthService := service.NewOAuthService(OauthGoogleService, OauthYandexService, JWTService, SessionService, UserRepository, Logger, cfg.JWTConfig.SecretKey, cfg.AllowedRedirectURLs)
-    return &App{
-        Config:             cfg,
-        AuthService:        AuthService,
-        OauthGoogleService: OauthGoogleService,
-        OauthYandexService: OauthYandexService,
-        OAuthService:       OAuthService,
-        EmailService:       EmailService,
-        JWTService:         JWTService,
-        SessionService:     SessionService,
-        Logger:             Logger,
-    }
+	AuthService := service.NewAuthService(JWTService, EmailService, SessionService, UserRepository, TokenBlocklist, Logger)
+	OauthGoogleService := oauth.NewOAuthGoogleService(UserRepository, cfg, Logger)
+	OauthYandexService := oauth.NewOAuthYandexService(UserRepository, cfg, Logger)
+	OAuthService := service.NewOAuthService(OauthGoogleService, OauthYandexService, JWTService, SessionService, UserRepository, Logger, cfg.JWTConfig.SecretKey, cfg.AllowedRedirectURLs)
+	return &App{
+		Config:             cfg,
+		AuthService:        AuthService,
+		OauthGoogleService: OauthGoogleService,
+		OauthYandexService: OauthYandexService,
+		OAuthService:       OAuthService,
+		EmailService:       EmailService,
+		JWTService:         JWTService,
+		SessionService:     SessionService,
+		Logger:             Logger,
+	}
 }
-
-

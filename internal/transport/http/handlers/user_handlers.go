@@ -339,7 +339,7 @@ func ConfirmPasswordReset(ctx *gin.Context, a *app.App) {
 	}
 
 	if err := a.AuthService.ConfirmPasswordReset(ctx, token); err != nil {
-		if errors.Is(err, service.ErrInvalidPasswordResetToken) || errors.Is(err, service.ErrPasswordResetTokenExpired) {
+		if errors.Is(err, service.ErrInvalidPasswordResetToken) || errors.Is(err, service.ErrPasswordResetTokenExpired) || errors.Is(err, service.ErrPasswordResetTokenUsed) {
 			ctx.JSON(http.StatusBadRequest, &presenters.ErrorResponse{Error: "invalid or expired token"})
 			return
 		}

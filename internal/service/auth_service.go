@@ -9,13 +9,15 @@ import (
 	"fmt"
 	"math/big"
 	"strings"
+	"time"
 
 	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
 )
 
 var (
-	ErrUserExists = fmt.Errorf("user already exists")
+	ErrUserExists             = fmt.Errorf("user already exists")
+	ErrPasswordResetTokenUsed = errors.New("password reset token already used")
 )
 
 type AuthService interface {
@@ -42,16 +44,18 @@ type authService struct {
 	emailService   EmailService
 	sessionService SessionService
 	userRepository repository.UserRepository
+	tokenBlocklist repository.TokenBlocklist
 	logger         *logrus.Logger
 }
 
 func NewAuthService(jwtService JWTService, emailService EmailService,
-	sessionService SessionService, userRepository repository.UserRepository, logger *logrus.Logger) AuthService {
+	sessionService SessionService, userRepository repository.UserRepository, tokenBlocklist repository.TokenBlocklist, logger *logrus.Logger) AuthService {
 	return &authService{
 		jwtService:     jwtService,
 		emailService:   emailService,
 		sessionService: sessionService,
 		userRepository: userRepository,
+		tokenBlocklist: tokenBlocklist,
 		logger:         logger,
 	}
 }
@@ -308,7 +312,7 @@ func (a *authService) RequestPasswordReset(ctx context.Context, email string) er
 
 // ConfirmPasswordReset validates confirmation token, rotates the password, revokes sessions and emails the new password.
 func (a *authService) ConfirmPasswordReset(ctx context.Context, token string) error {
-	userID, tokenEmail, err := a.emailService.VerifyPasswordResetToken(ctx, token)
+	userID, tokenEmail, tokenID, expiresAt, err := a.emailService.VerifyPasswordResetToken(ctx, token)
 	if err != nil {
 		return fmt.Errorf("failed to verify password reset token: %w", err)
 	}
@@ -330,6 +334,16 @@ func (a *authService) ConfirmPasswordReset(ctx context.Context, token string) er
 		}).Warn("password reset token email differs from stored email")
 	}
 
+	if a.tokenBlocklist != nil {
+		used, blockErr := a.tokenBlocklist.IsBlocked(ctx, tokenID)
+		if blockErr != nil {
+			return fmt.Errorf("failed to verify password reset token status: %w", blockErr)
+		}
+		if used {
+			return fmt.Errorf("password reset token already used: %w", ErrPasswordResetTokenUsed)
+		}
+	}
+
 	newPassword, err := generateRandomPassword(12, 16)
 	if err != nil {
 		return fmt.Errorf("failed to generate new password: %w", err)
@@ -346,6 +360,16 @@ func (a *authService) ConfirmPasswordReset(ctx context.Context, token string) er
 
 	if err := a.sessionService.DeleteAllUserSessions(ctx, userID); err != nil {
 		a.logger.WithError(err).Warnf("failed to revoke sessions for user %d after password reset", userID)
+	}
+
+	if a.tokenBlocklist != nil {
+		ttl := time.Until(expiresAt)
+		if ttl <= 0 {
+			ttl = time.Hour
+		}
+		if err := a.tokenBlocklist.Block(ctx, tokenID, ttl); err != nil {
+			a.logger.WithError(err).Warn("failed to mark password reset token as used")
+		}
 	}
 
 	if err := a.emailService.SendNewPassword(ctx, targetEmail, newPassword); err != nil {
