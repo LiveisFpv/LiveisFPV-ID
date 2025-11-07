@@ -22,6 +22,27 @@ definitions:
       access_token:
         type: string
     type: object
+  presenters.UserCreateWithRolesRequest:
+    properties:
+      email:
+        type: string
+      first_name:
+        type: string
+      last_name:
+        type: string
+      password:
+        type: string
+      roles:
+        items:
+          type: string
+        type: array
+    required:
+    - email
+    - first_name
+    - last_name
+    - password
+    - roles
+    type: object
   presenters.UserListResponse:
     properties:
       items:
@@ -80,6 +101,26 @@ definitions:
           type: string
         type: array
     type: object
+  presenters.UserUpdateAdminRequest:
+    properties:
+      email:
+        type: string
+      first_name:
+        type: string
+      last_name:
+        type: string
+      locale_type:
+        example: ru-RU
+        type: string
+      password:
+        type: string
+      roles:
+        items:
+          type: string
+        type: array
+    required:
+    - roles
+    type: object
   presenters.UserUpdateRequest:
     properties:
       email:
@@ -101,6 +142,136 @@ info:
   title: SSO API
   version: "0.1"
 paths:
+  /auth/admin/users:
+    get:
+      consumes:
+      - application/json
+      description: Returns a paginated list of users with optional filtering
+      parameters:
+      - description: Search by first_name, last_name, email
+        in: query
+        name: q
+        type: string
+      - description: Filter by role
+        in: query
+        name: role
+        type: string
+      - description: Filter by email confirmation status
+        in: query
+        name: email_confirmed
+        type: boolean
+      - description: Filter by locale (e.g., ru)
+        in: query
+        name: locale
+        type: string
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: Page size
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/presenters.UserListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/presenters.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/presenters.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/presenters.ErrorResponse'
+      summary: List users
+      tags:
+      - User
+    post:
+      consumes:
+      - application/json
+      description: Creates a new user with custom roles.
+      parameters:
+      - description: Create request with roles
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/presenters.UserCreateWithRolesRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/presenters.UserResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/presenters.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/presenters.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/presenters.ErrorResponse'
+      summary: Create user with roles
+      tags:
+      - User
+  /auth/admin/users/{id}:
+    put:
+      consumes:
+      - application/json
+      description: Updates user profile fields including roles by user ID.
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Admin update request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/presenters.UserUpdateAdminRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/presenters.UserResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/presenters.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/presenters.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/presenters.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/presenters.ErrorResponse'
+      summary: Update user (admin)
+      tags:
+      - User
   /auth/authenticate:
     get:
       consumes:
@@ -358,56 +529,6 @@ paths:
           schema:
             $ref: '#/definitions/presenters.ErrorResponse'
       summary: Update user
-      tags:
-      - User
-  /auth/users:
-    get:
-      consumes:
-      - application/json
-      description: Returns a paginated list of users with optional filtering
-      parameters:
-      - description: Search by first_name, last_name, email
-        in: query
-        name: q
-        type: string
-      - description: Filter by role
-        in: query
-        name: role
-        type: string
-      - description: Filter by email confirmation status
-        in: query
-        name: email_confirmed
-        type: boolean
-      - description: Filter by locale (e.g., ru)
-        in: query
-        name: locale
-        type: string
-      - default: 1
-        description: Page number
-        in: query
-        name: page
-        type: integer
-      - default: 20
-        description: Page size
-        in: query
-        name: limit
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/presenters.UserListResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/presenters.ErrorResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/presenters.ErrorResponse'
-      summary: List users
       tags:
       - User
   /auth/validate:

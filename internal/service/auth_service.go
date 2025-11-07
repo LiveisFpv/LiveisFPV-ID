@@ -28,6 +28,7 @@ type AuthService interface {
 	Validate(ctx context.Context, accessToken string) (int, error)
 	CreateUser(ctx context.Context, user *domain.User) (*domain.User, error)
 	UpdateUser(ctx context.Context, accessToken string, user *domain.User) (*domain.User, error)
+	UpdateUserAdmin(ctx context.Context, input *domain.User) (*domain.User, error)
 	ConfirmEmail(ctx context.Context, token string) (int, error)
 	SendEmailConfirmation(ctx context.Context, userID int, email string) error
 	RequestPasswordReset(ctx context.Context, email string) error
@@ -415,6 +416,49 @@ func (a *authService) UpdateUser(ctx context.Context, accessToken string, userDa
 	if err != nil {
 		return nil, fmt.Errorf("failed to update user: %w", err)
 	}
+	return user, nil
+}
+
+// UpdateUserAdmin updates arbitrary user data without relying on access token verification.
+func (a *authService) UpdateUserAdmin(ctx context.Context, input *domain.User) (*domain.User, error) {
+	userID := input.ID
+	user, err := a.userRepository.GetUserByID(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user by ID %d: %w", userID, err)
+	}
+	if user.FirstName == "" {
+		user.FirstName = input.FirstName
+	}
+
+	if user.LastName == "" {
+		user.LastName = input.LastName
+	}
+
+	if user.Email == "" {
+		user.Email = input.Email
+	}
+
+	if input.Password != nil {
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(*input.Password), bcrypt.DefaultCost)
+		if err != nil {
+			return nil, fmt.Errorf("failed to hash password: %w", err)
+		}
+		hashedPass := string(hashedPassword)
+		user.Password = &hashedPass
+	}
+
+	if input.Roles != nil {
+		user.Roles = input.Roles
+	}
+
+	if input.LocaleType != nil {
+		user.LocaleType = input.LocaleType
+	}
+
+	if err := a.userRepository.UpdateUser(ctx, user); err != nil {
+		return nil, fmt.Errorf("failed to update user via admin: %w", err)
+	}
+
 	return user, nil
 }
 

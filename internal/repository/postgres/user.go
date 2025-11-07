@@ -210,9 +210,14 @@ func (ur *userRepository) GetUserByVkID(ctx context.Context, id string) (*domain
 func (ur *userRepository) UpdateUser(ctx context.Context, user *domain.User) error {
 	query := `
         UPDATE users
-        SET first_name = $1, last_name = $2, email = $3, photo = $4, roles = $5, locale = $6, password = $7
+        SET first_name = $1, last_name = $2, email = $3, photo = $4, roles = $5, locale = $6, pass_hash = $7
         WHERE id = $8 AND is_active = true
     `
+
+	var passHash []byte
+	if user.Password != nil {
+		passHash = []byte(*user.Password)
+	}
 
 	_, err := ur.db.Exec(ctx, query,
 		user.FirstName,
@@ -221,7 +226,7 @@ func (ur *userRepository) UpdateUser(ctx context.Context, user *domain.User) err
 		user.Photo,
 		user.Roles,
 		user.LocaleType,
-		user.Password,
+		passHash,
 		user.ID,
 	)
 	if err != nil {

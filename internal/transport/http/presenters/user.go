@@ -33,6 +33,15 @@ type UserUpdateRequest struct {
 	LocaleType *string `json:"locale_type" example:"ru-RU"`
 }
 
+type UserUpdateAdminRequest struct {
+	FirstName  *string   `json:"first_name"`
+	LastName   *string   `json:"last_name"`
+	Email      *string   `json:"email"`
+	Password   *string   `json:"password"`
+	LocaleType *string   `json:"locale_type" example:"ru-RU"`
+	Roles      *[]string `json:"roles" binding:"required"`
+}
+
 type PasswordResetRequest struct {
 	Email string `json:"email" binding:"required,email"`
 }

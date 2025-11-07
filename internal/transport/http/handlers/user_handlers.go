@@ -401,11 +401,12 @@ func CreateUser(ctx *gin.Context, a *app.App) {
 		ctx.JSON(http.StatusBadRequest, resp)
 		return
 	}
+	password := req.Password
 	user := &domain.User{
 		FirstName: req.FirstName,
 		LastName:  req.LastName,
 		Email:     req.Email,
-		Password:  &req.Password,
+		Password:  &password,
 	}
 	created, err := a.AuthService.CreateUser(ctx, user)
 	if err == service.ErrUserExists {
@@ -429,6 +430,131 @@ func CreateUser(ctx *gin.Context, a *app.App) {
 	})
 }
 
+// CreateUserWithRoles
+// @Summary Create user with roles
+// @Description Creates a new user with custom roles.
+// @Tags User
+// @Accept json
+// @Produce json
+// @Param request body presenters.UserCreateWithRolesRequest true "Create request with roles"
+// @Success 201 {object} presenters.UserResponse
+// @Failure 400 {object} presenters.ErrorResponse
+// @Failure 403 {object} presenters.ErrorResponse
+// @Failure 500 {object} presenters.ErrorResponse
+// @Router /auth/admin/users [post]
+func CreateUserWithRoles(ctx *gin.Context, a *app.App) {
+	var req presenters.UserCreateWithRolesRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, presenters.Error(fmt.Errorf("invalid request: %w", err)))
+		return
+	}
+
+	password := req.Password
+	user := &domain.User{
+		FirstName: req.FirstName,
+		LastName:  req.LastName,
+		Email:     req.Email,
+		Password:  &password,
+		Roles:     req.Roles,
+	}
+
+	created, err := a.AuthService.CreateUser(ctx, user)
+	if err == service.ErrUserExists {
+		ctx.JSON(http.StatusBadRequest, presenters.Error(err))
+		return
+	}
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, presenters.Error(fmt.Errorf("create user failed: %w", err)))
+		return
+	}
+
+	ctx.JSON(http.StatusCreated, presenters.UserResponse{
+		FirstName:      created.FirstName,
+		LastName:       created.LastName,
+		Email:          created.Email,
+		EmailConfirmed: created.EmailConfirmed,
+		LocaleType:     created.LocaleType,
+		Roles:          created.Roles,
+		Photo:          created.Photo,
+	})
+}
+
+// UpdateUserAdmin
+// @Summary Update user (admin)
+// @Description Updates user profile fields including roles by user ID.
+// @Tags User
+// @Accept json
+// @Produce json
+// @Param id path int true "User ID"
+// @Param request body presenters.UserUpdateAdminRequest true "Admin update request"
+// @Success 200 {object} presenters.UserResponse
+// @Failure 400 {object} presenters.ErrorResponse
+// @Failure 404 {object} presenters.ErrorResponse
+// @Failure 403 {object} presenters.ErrorResponse
+// @Failure 500 {object} presenters.ErrorResponse
+// @Router /auth/admin/users/{id} [put]
+func UpdateUserAdmin(ctx *gin.Context, a *app.App) {
+	idParam := ctx.Param("id")
+	userID, err := strconv.Atoi(idParam)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, presenters.Error(fmt.Errorf("invalid user id: %w", err)))
+		return
+	}
+
+	var req presenters.UserUpdateAdminRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, presenters.Error(fmt.Errorf("invalid request: %w", err)))
+		return
+	}
+
+	updated := &domain.User{
+		ID:        userID,
+		FirstName: "",
+		LastName:  "",
+		Email:     "",
+		Password:  nil,
+		Roles:     nil,
+	}
+	if req.FirstName != nil {
+		updated.FirstName = *req.FirstName
+	}
+	if req.LastName != nil {
+		updated.LastName = *req.LastName
+	}
+	if req.Email != nil {
+		updated.Email = *req.Email
+	}
+	if req.Password != nil {
+		updated.Password = req.Password
+	}
+	if req.LocaleType != nil {
+		updated.LocaleType = req.LocaleType
+	}
+	if req.Roles != nil {
+		updated.Roles = *req.Roles
+	}
+
+	user, err := a.AuthService.UpdateUserAdmin(ctx, updated)
+	if err != nil {
+		if errors.Is(err, repository.ErrorUserNotFound) {
+			ctx.JSON(http.StatusNotFound, presenters.Error(repository.ErrorUserNotFound))
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, presenters.Error(fmt.Errorf("admin update user failed: %w", err)))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, presenters.UserResponse{
+		FirstName:      user.FirstName,
+		LastName:       user.LastName,
+		Email:          user.Email,
+		EmailConfirmed: user.EmailConfirmed,
+		LocaleType:     user.LocaleType,
+		Roles:          user.Roles,
+		Photo:          user.Photo,
+	})
+}
+
 // ListUsers
 // @Summary List users
 // @Description Returns a paginated list of users with optional filtering
@@ -443,8 +569,9 @@ func CreateUser(ctx *gin.Context, a *app.App) {
 // @Param limit query int false "Page size" default(20)
 // @Success 200 {object} presenters.UserListResponse
 // @Failure 400 {object} presenters.ErrorResponse
+// @Failure 403 {object} presenters.ErrorResponse
 // @Failure 500 {object} presenters.ErrorResponse
-// @Router /auth/users [get]
+// @Router /auth/admin/users [get]
 func ListUsers(ctx *gin.Context, a *app.App) {
 	// Parse pagination
 	page := 1
