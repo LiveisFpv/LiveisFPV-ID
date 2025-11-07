@@ -1,223 +1,259 @@
 # LiveisFPV ID (SSO API)
 
-Single Sign-On and authentication service written in Go. Provides user registration and login, JWT access/refresh tokens, Redis-backed sessions and token blocklist, email confirmation, and OAuth 2.0 login via Google. HTTP API is documented with Swagger; core settings (domain/ports/CORS/redirects) are configured via environment variables.
+LiveisFPV ID is a Go-based single sign-on service that powers registration, password authentication, OAuth 2.0 login, secure session refresh, email confirmation, and admin-controlled account management. The API is documented with Swagger, ships with Docker Compose (core, Postgres, Redis, nginx, certbot, migrator), and is wired for future gRPC/MinIO integrations.
 
-- Language: Go 1.24
-- HTTP: Gin
-- Auth: JWT (HS256), refresh sessions in Redis, token blocklist by JTI
-- OAuth: Google (OIDC userinfo) and Yandex, multi-frontend redirects
-- Storage: PostgreSQL (users), Redis (sessions, blocklist)
-- Docs: Swagger UI at `/swagger/index.html`
+## Highlights
+- JWT (HS256) access tokens plus Redis-backed refresh sessions and a token/JTI blocklist for logout and password-reset enforcement.
+- Self-service registration, email confirmation, profile updates, locale support, password reset with SMTP-delivered one-time links, and admin CRUD with role management.
+- OAuth 2.0 flows for Google and Yandex that use signed state JWTs, nonce cookies, and redirect whitelists; VK endpoints exist as stubs.
+- Reverse-proxy friendly: nginx templates + certbot volumes for HTTPS, optional Swagger Basic Auth, strict CORS/redirect configuration, and Makefile helpers.
+- Tooling includes Air for hot reload, golang-migrate wrapper, generated Swagger spec, GitHub Actions deploy workflow, and proto scaffolding for gRPC.
 
-## Quick Start (Docker)
+## Stack & Components
 
-Prereqs:
-- Docker + Docker Compose
-- Optional: Go 1.24 (for local dev)
+| Layer | Tech | Notes |
+| --- | --- | --- |
+| Language/runtime | Go 1.24+ (Dockerfile uses 1.25-alpine) | Modules in `go.mod`; Air handles live reload during `docker compose up`. |
+| HTTP/API | Gin, gin-contrib/cors, logrus, swaggo | Middlewares for admin auth/logging; Swagger served at `/swagger/index.html`. |
+| Persistence | PostgreSQL 17 (users), Redis 8 (sessions & blocklist) | Redis stores `session:<id>`, `refresh_token:<token>`, `user_sessions:<userID>` and token blocklist entries. |
+| Auth | golang-jwt/jwt/v5, bcrypt, custom session/jwt/email services | JWT TTLs are `CustomDuration`s from env; password reset tokens are signed JWTs with SMTP secret. |
+| Tooling | `tools/migrator` (golang-migrate), `.air.toml`, Makefile, Swagger docs | `swag init` regenerates `docs/swagger.{json,yaml}`. |
+| Deployment | Docker Compose (core, postgres, redis, migrator, nginx, certbot), GitHub Actions | `.github/workflows/deploy.yml` SSHes to the VPS, pulls main, rebuilds, and restarts compose stack. |
 
-Steps:
-1) Create external network once (compose expects it):
-   - `docker network create grpc_network`
-2) Copy `.env` and fill required variables (see below). Minimal local setup:
-   - `DOMAIN=localhost`
-   - `JWT_SECRET_KEY=change_me`
-   - `ALLOWED_CORS_ORIGINS=http://localhost:5173,http://localhost:8080`
-   - `ALLOWED_REDIRECT_URLS=http://localhost:5173`
-   - Google/Yandex OAuth credentials if using OAuth
-3) Start services:
-   - `docker compose up --build`
-4) Open Swagger UI:
-   - `http://localhost:8080/swagger/index.html`
+## Repository Layout
 
-Compose services:
-- `core`: the API server
-- `postgres`: main DB
-- `redis`: sessions/blocklist
-- `migrator`: runs DB migrations from `db/migrations`
+```
+.
+├─ cmd/                     # main entrypoint (HTTP server + Swagger wiring)
+├─ internal/
+│  ├─ app/                  # service wiring and dependency graph
+│  ├─ config/               # cleanenv config structs
+│  ├─ domain/               # entities and JWT/email claim structs
+│  ├─ repository/
+│  │  ├─ postgres/          # pgx user repository (CRUD, filters)
+│  │  ├─ redis/             # refresh sessions + token blocklist
+│  │  └─ minio/             # placeholder for object storage
+│  ├─ service/              # auth, jwt, session, email, oauth orchestration
+│  └─ transport/http/       # gin server, routers, handlers, middleware, presenters
+├─ pkg/
+│  ├─ logger/               # logrus setup + gRPC logging interceptor
+│  └─ storage/              # Postgres, Redis, MinIO client helpers
+├─ api/sso/v1/              # proto stubs for future gRPC surface
+├─ db/migrations/           # SQL migrations (golang-migrate compatible)
+├─ tools/migrator/          # standalone migrator with CLI flags
+├─ docs/                    # generated Swagger spec (keep in sync via `swag init`)
+├─ nginx/, certbot/         # templated reverse proxy and Let's Encrypt volumes
+├─ docker-compose.yml, dockerfile, .air.toml, Makefile
+└─ .github/workflows/deploy.yml
+```
 
-## Configuration (.env)
+## Feature Overview
 
-The service uses cleanenv to load settings. Important variables:
+### Authentication & Session Lifecycle
+- Credentials live in the `users` table (see `db/migrations/1_init.up.sql`) with `roles`, `locale`, social IDs, and `email_confirmed`.
+- `JWTService` issues HS256 access/refresh tokens with TTLs from env (`ACCESS_TOKEN_TTL`, `REFRESH_TOKEN_TTL`). Each access token carries a JTI that is stored when refresh sessions are created.
+- `SessionService` persists refresh sessions in Redis (`session:<id>`, `refresh_token:<token>`) and keeps a `user_sessions:<userId>` set for bulk revocation. On logout or password resets it deletes sessions and adds the access-token JTI to the blocklist.
+- `TokenBlocklist` is a thin Redis wrapper that stores revoked JTIs as expiring keys; it is also reused to mark consumed password reset tokens.
+- `CookieConfig` dictates path/domain/secure/HTTP-only/SameSite/max-age for the `refresh_token` cookie so browsers enforce the correct policy.
 
-- `DOMAIN`: Public hostname used for URLs/cookies (e.g. `localhost`, `.example.com`).
-- `ALLOWED_CORS_ORIGINS`: Comma-separated list of origins allowed by CORS (e.g. `http://localhost:5173`). Required; the server fails to start if empty.
-- `ALLOWED_REDIRECT_URLS`: Comma-separated list of allowed redirect URLs for OAuth (e.g. `http://localhost:5173`).
-- `PUBLIC_URL`: Externally reachable URL of this service (e.g. `https://id.example.com`). Used to build OAuth callbacks and emails.
+### Account & Admin Workflows
+- Registration (`POST /api/auth/create`) hashes passwords with bcrypt, stores the user as inactive, and sends an email confirmation link signed with `SMTP_JWT_SECRET`. `GET /api/auth/confirm-email` flips `email_confirmed`.
+- Authenticated users can update their profile (`PUT /api/auth/update`) and optionally password/locale/photo. The handler re-validates the bearer token via `AuthService.Authenticate`.
+- Password reset is a two-step flow: request (`POST /api/auth/password-reset`) issues a JWT link valid for 7 days; confirm (`GET /api/auth/password-reset/confirm`) validates the token, generates a random password, revokes all sessions, marks the token as used in Redis, and emails the new password.
+- Admin endpoints under `/api/auth/admin/*` let privileged users list, create (with custom roles), and update users. The `AdminOnly` middleware treats any user with role `ADMIN` or email listed in `DEFAULT_ADMIN_EMAILS` (case-insensitive) as an administrator.
 
-PostgreSQL:
-- `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`
-- `DB_SSL` (default `disable`)
+### OAuth Flows
+- Google and Yandex providers share `OAuthService`. A signed JWT “state” (subject `oauth_state`) includes a nonce (stored in the `oauth_state` cookie) and an optional redirect URL. State expires after 5 minutes and is signed with `JWT_SECRET_KEY`.
+- Redirect URLs must either exactly match or share scheme+host with an entry in `ALLOWED_REDIRECT_URLS`. Path prefixes are allowed so you can whitelist `https://app.example.com/auth` and serve deeper routes beneath it.
+- Callback handlers upsert users: match by provider ID, fall back to email resolution, set profile fields (photo, names), mark email confirmed, and issue tokens + Redis sessions + `refresh_token` cookie. If the redirect is allowed the API responds with a 307 to the frontend, otherwise JSON is returned.
+- VK endpoints and `internal/service/oauth/vkid_service.go` are present but currently return `501 Not Implemented`; compose still exposes `VK_CLIENT_ID/SECRET` for future support.
 
-Redis:
-- `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD`
-- `REDIS_DB` (default `0`)
+### Infrastructure & Tooling
+- `.air.toml` compiles `./cmd` to `/tmp/main`; the Dockerfile installs Air and runs it so local changes trigger rebuilds inside containers.
+- `tools/migrator` wraps `github.com/golang-migrate/migrate/v4`, forces out of dirty states, and can optionally roll back + reset when a migration fails.
+- `docs/swagger.*` and `docs/docs.go` are generated via `swag init -g cmd/main.go -o docs`; keep comments in handlers up to date.
+- `api/sso/v1/*.proto` plus `pkg/logger/interceptor.go` lay groundwork for a gRPC server (`GRPC_PORT`/`GRPC_TIMEOUT`), although gRPC is not started in `cmd/main.go` yet.
+- `pkg/storage/minio.go` and `config.MinioConfig` implement a verified MinIO client (bucket existence check) that you can wire in when user uploads/avatars move to object storage.
+- The nginx container renders templates based on certificate availability: HTTP-only proxy until certs exist; once certs live under `certbot/conf`, HTTPS is enabled and HTTP redirects to HTTPS.
 
-Email (for confirmations):
-- `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `FROM_EMAIL`
-- `SMTP_JWT_SECRET`: Secret used to sign email confirmation tokens
+## API Surface (summary)
 
-JWT:
-- `JWT_SECRET_KEY`: Secret key used to sign tokens
-- `ACCESS_TOKEN_TTL`: Access token lifetime (supports `s`, `m`, `h`, `d`, `mo`) - e.g. `15m`
-- `REFRESH_TOKEN_TTL`: Refresh token lifetime - e.g. `7d`
+Full details (request/response schemas, error payloads, query params) live in [docs/swagger.json](docs/swagger.json) and are served at `http://<DOMAIN>:<HTTP_PORT>/swagger/index.html`.
 
-Cookies:
-- `COOKIE_PATH` (default `/`)
-- `COOKIE_SECURE` (`true` in production)
-- `COOKIE_HTTP_ONLY` (default `true`)
-- `COOKIE_MAX_AGE` (duration like `7d`)
-- Note: Cookie domain is taken from `DOMAIN`.
-- `COOKIE_SAME_SITE` (default `Lax`): one of `Lax`, `Strict`, `None`. For cross‑site flows (frontend on another origin), set `None` and ensure `COOKIE_SECURE=true`.
+### Auth Endpoints
 
-gRPC (scaffolding present, not started by default):
-- `GRPC_PORT` (default `50051`)
-- `GRPC_TIMEOUT` (default `24h`)
+| Method | Path | Purpose |
+| --- | --- | --- |
+| `POST` | `/api/auth/create` | Register user, hash password, send confirmation email. |
+| `GET` | `/api/auth/confirm-email?token=` | Validate email-confirmation token (24 h TTL) and mark user confirmed. |
+| `POST` | `/api/auth/login` | Exchange email/password for access token (response) and refresh cookie. |
+| `POST` | `/api/auth/refresh` | Rotate tokens via refresh cookie, update Redis session, issue new cookie. |
+| `POST` | `/api/auth/logout` | Delete refresh session, blocklist JTI, clear cookie. |
+| `GET` | `/api/auth/authenticate` | Return user profile inferred from bearer access token. |
+| `GET` | `/api/auth/validate` | Validate bearer access token; returns 200/401 only. |
+| `PUT` | `/api/auth/update` | Update profile/password/locale; requires bearer token. |
+| `POST` | `/api/auth/password-reset` | Send password-reset email (no-op if user missing). |
+| `GET` | `/api/auth/password-reset/confirm?token=` | Redeem reset token, generate new password, revoke sessions, email the temp password. |
 
-HTTP:
-- `HTTP_PORT` (default `8080`)
+### OAuth Endpoints
 
-OAuth (Google/Yandex):
-- `GOOGLE_CLIENT_ID`
-- `GOOGLE_CLIENT_SECRET`
-- `YANDEX_CLIENT_ID`, `YANDEX_CLIENT_SECRET`
+| Method | Path | Purpose |
+| --- | --- | --- |
+| `GET` | `/api/oauth/google?redirect_url=` | Start Google OAuth, issue signed state + nonce cookie. |
+| `GET` | `/api/oauth/google/callback` | Complete Google OAuth, mint tokens/session, redirect or return JSON. |
+| `GET` | `/api/oauth/yandex?redirect_url=` | Start Yandex OAuth, same mechanics as Google. |
+| `GET` | `/api/oauth/yandex/callback` | Complete Yandex OAuth. |
+| `GET` | `/api/oauth/vk` | Placeholder; returns 501. |
+| `GET` | `/api/oauth/vk/callback` | Placeholder; returns 501. |
 
-Tip: If you set an env var to an empty string (e.g. `DOMAIN=`) the library treats it as set, so env-default will not apply. Set a real value or remove the variable.
+### Admin Endpoints (require `ADMIN` role or `DEFAULT_ADMIN_EMAILS`)
 
-## Endpoints (HTTP)
+| Method | Path | Purpose |
+| --- | --- | --- |
+| `GET` | `/api/auth/admin/users` | Paginated, filterable list (`q`, `role`, `email_confirmed`, `locale`, `page`, `limit`). |
+| `POST` | `/api/auth/admin/users` | Create user with explicit roles. |
+| `PUT` | `/api/auth/admin/users/:id` | Update user data/profile/roles without needing their access token. |
 
-Base path: `/api`
+## Getting Started
 
-Auth:
-- `POST /api/auth/create` - Register user; sends email confirmation.
-- `GET  /api/auth/confirm-email?token=...` - Confirm email.
-- `POST /api/auth/login` - Login; returns tokens and sets refresh cookie.
-- `POST /api/auth/refresh` - Issue new tokens by refresh cookie; sets new cookie.
-- `POST /api/auth/logout` - Logout; deletes session and clears cookie.
-- `GET  /api/auth/authenticate` - Return current user by access token.
-- `GET  /api/auth/validate` - Validate access token only.
+### Requirements
+- Go 1.24+ (for native runs), Docker + Docker Compose v2 (for stack), and `swag` CLI if you modify handler docs.
+- Running PostgreSQL and Redis instances (Compose provides both).
 
-OAuth:
-- `GET /api/oauth/google?redirect_url=<frontend>` - Start Google OAuth. Saves state cookie (and redirect_url if allowed) and redirects to Google.
-- `GET /api/oauth/google/callback?code=...&state=...` - Callback. Creates session, sets refresh cookie and either:
-  - Redirects (307) to allowed `redirect_url` (if provided/allowed), or
-  - Returns JSON with `{ "error": "..." }`.
-- `GET /api/oauth/yandex?redirect_url=<frontend>` - Start Yandex OAuth. Saves state cookie (and redirect_url if allowed) and redirects to Yandex.
-- `GET /api/oauth/yandex/callback?code=...&state=...` - Callback. Creates session, sets refresh cookie and either:
-  - Redirects (307) to allowed `redirect_url` (if provided/allowed), or
-  - Returns JSON with `{ "error": "..." }`.
+### Docker Compose (all-in-one stack)
+1. Create the shared external network once (Compose expects it): `docker network create grpc_network`.
+2. Copy `.env` (see Configuration section) and set at minimum: `DOMAIN`, `HTTP_PORT`, `JWT_SECRET_KEY`, `ALLOWED_CORS_ORIGINS`, `ALLOWED_REDIRECT_URLS`, database/Redis credentials, SMTP settings, and optionally `DEFAULT_ADMIN_EMAILS` for bootstrap admins.
+3. Start everything: `docker compose up --build` (or `make deploy`). Services include `core`, `postgres`, `redis`, `migrator`, `nginx`, and `certbot`.
+4. Visit Swagger UI at `http://localhost:8080/swagger/index.html` (or via nginx if TLS is configured).
+5. To rebuild without cache: `make rebuild`. To stop: `make down`. Logs: `make logs`.
 
-VK routes exist but currently return "Not Implemented".
+### Local Development without Docker
+1. Ensure Postgres & Redis are running and accessible via the env vars you intend to use. You can run them via Docker (`docker compose up postgres redis`) or locally.
+2. Export env vars (`cp .env .env.local && source .env.local` on Unix shells) or rely on OS-level env values.
+3. Run the API: `go run ./cmd`. For live reload outside containers install Air (`go install github.com/air-verse/air@latest`) and run `air -c .air.toml`.
 
-## OAuth Notes
+### Database Migrations
+- SQL lives under `db/migrations`. Compose starts the `migrator` service after Postgres healthchecks, which runs all pending migrations and exits.
+- To run migrations manually: `make migrate` or `docker compose run --rm migrator`.
+- Standalone execution example:
+  ```sh
+  go run ./tools/migrator \
+    -user="$DB_USER" -password="$DB_PASSWORD" \
+    -host="$DB_HOST" -port="$DB_PORT" -dbname="$DB_NAME" \
+    -migrations-path="$(pwd)/db/migrations"
+  ```
 
-- Signed state (JWT) with nonce and optional redirect_url is used for Google and Yandex. State is validated in callback; nonce is stored in `oauth_state` cookie.
-- Google: OIDC userinfo; primary id is `sub` (fallback to `id`). Scopes include `openid`, `userinfo.profile`, `userinfo.email`.
-- Yandex: userinfo from https://login.yandex.ru/info?format=json with `login:email` and `login:info` scopes.
-- Multi-frontend flow:
-  - Frontend calls `/api/oauth/{provider}?redirect_url=<encoded URL>`.
-  - Backend validates redirect_url against `ALLOWED_REDIRECT_URLS`, embeds it into the signed state and redirects to provider.
-  - After callback, backend sets the refresh cookie and redirects (307) to that redirect_url or returns JSON with access token.
-  - Frontend calls `/api/auth/refresh` with `credentials: 'include'` to obtain an access_token.
+### Swagger Docs Regeneration
+1. Install the CLI once: `go install github.com/swaggo/swag/cmd/swag@latest`.
+2. From repo root run `make swag` (alias for `swag init -g cmd/main.go -o docs`).
 
-## Swagger
+### Makefile Shortcuts
 
-- Swagger UI: `GET /swagger/index.html`
-- Host and basePath are set dynamically from `DOMAIN` and `HTTP_PORT` at server startup.
-- To regenerate docs after handler comment changes:
-  1) `go install github.com/swaggo/swag/cmd/swag@latest`
-  2) From repo root: `swag init -g cmd/main.go -o docs`
+| Command | Description |
+| --- | --- |
+| `make deploy` / `make up` | Build + start stack (detached). |
+| `make down` | Stop stack. |
+| `make logs` | Tail container logs. |
+| `make rebuild` | Rebuild without cache, then start. |
+| `make restart` | Restart only the `core` service. |
+| `make network` | Create the external `grpc_network` if missing. |
+| `make migrate` | Run migrator ad-hoc. |
+| `make swag` | Regenerate Swagger docs. |
+| `make clean` | `docker system prune` and delete dangling volumes (use cautiously). |
 
-Production access control:
-- `SWAGGER_ENABLED` (default `true`): set to `false` to completely disable Swagger UI in production.
-- `SWAGGER_USER` and `SWAGGER_PASSWORD` (both optional): if both are set, Swagger UI is protected with HTTP Basic Auth at `/swagger/*`. Example: `SWAGGER_USER=docs`, `SWAGGER_PASSWORD=verysecret`.
-- Recommended for prod: set `SWAGGER_ENABLED=true` and protect with Basic Auth, or set `SWAGGER_ENABLED=false` and expose docs only internally.
+### GitHub Actions Deployment
+`.github/workflows/deploy.yml` SSHes into your VPS using secrets (`SSH_HOST`, `SSH_USER`, `SSH_PRIVATE_KEY`), pulls `main`, rebuilds the compose images, and restarts the stack. This keeps all deployment logic on the server (no docker context upload) and relies on the repo already being cloned on the VPS at `~/LiveisFPV-ID`.
 
-## Data & Migrations
+## Configuration Reference
 
-- Migrations live in `db/migrations`. A small migrator in `tools/migrator` runs at startup in Compose.
-- Users table (`db/migrations/1_init.up.sql`) includes fields for OAuth IDs and has defaults (`roles` default to `{"USER"}`, `locale` default `ru`).
-- Repository uses pgx; user lookups by id/email/google_id.
+> The project uses `cleanenv`. If an environment variable exists but is empty (e.g., `DOMAIN=`), the default is **not** applied; delete unset variables instead of setting them to an empty string.
 
-## Internals (Overview)
+### Core HTTP, Admin, Docs
+- `DOMAIN` (default `localhost`): base host for cookies and logging (no scheme). Use `.example.com` to share cookies across subdomains.
+- `PUBLIC_URL`: fully qualified URL (scheme + host [+ port]) used in OAuth callbacks and email links. Falls back to `http://DOMAIN:HTTP_PORT` if empty.
+- `HTTP_PORT` (default `8080`): Gin listener and internal service port (`nginx` proxies to it).
+- `ALLOWED_CORS_ORIGINS` (comma list, **required**): frontends permitted by CORS; the server fails to start when empty.
+- `ALLOWED_REDIRECT_URLS` (comma list): whitelisted redirect targets for OAuth `redirect_url`.
+- `DEFAULT_ADMIN_EMAILS` (comma list): bootstrap admin emails recognized by `AdminOnly` middleware even if `roles` array lacks `ADMIN`.
+- `SWAGGER_ENABLED` (default `true`): disable to completely remove `/swagger`.  
+  `SWAGGER_USER`/`SWAGGER_PASSWORD`: if both set, Swagger endpoints are protected with Basic Auth.
 
-- `internal/app`: wires config, repositories, and services.
-- `internal/config`: `cleanenv` config structs + custom duration type.
-- `internal/domain`: entities (`User`, token claims, `Session`).
-- `internal/repository`: Postgres (users) and Redis (sessions, blocklist).
-- `internal/service`:
-  - `auth_service`: login/register/confirm/refresh/logout.
-  - `jwt_service`: token creation/verification and JTI parsing.
-  - `session_service`: Redis sessions; blocklist on logout.
-  - `oauth/`: provider-specific clients (Google).
-  - `oauth_service.go`: service-level orchestration for OAuth login/callback.
-- `internal/transport/http`: Gin server, CORS, routers, handlers, presenters.
-- `internal/transport/rpc`: gRPC scaffolding (not wired in `main.go`).
+### Database & Redis
+- `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`, `DB_SSL` (default `disable`).
+- `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD`, `REDIS_DB` (default `0`). Redis is required; sessions and blocklist depend on it.
 
-## Local Development
+### JWT & Cookies
+- `JWT_SECRET_KEY`: signing key for access/refresh tokens **and** OAuth state tokens.
+- `ACCESS_TOKEN_TTL` / `REFRESH_TOKEN_TTL`: support suffixes `s`, `m`, `h`, `d`, `mo` (30-day months).
+- `COOKIE_PATH` (default `/`), `COOKIE_SECURE` (default `false`), `COOKIE_HTTP_ONLY` (default `true`), `COOKIE_MAX_AGE` (default `7d`), `COOKIE_SAME_SITE` (`Lax`, `Strict`, or `None`). Domain is inherited from `DOMAIN`.
 
-Run without Docker (requires running Postgres + Redis):
-- Set `.env` and export variables, or rely on OS env.
-- `go run ./cmd`
+### Email / SMTP
+- `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `FROM_EMAIL`.
+- `SMTP_JWT_SECRET`: separate signing key for email confirmation + password reset JWTs.
 
-Formatting/Build:
-- `go build ./...`
+### OAuth Providers
+- `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`.
+- `YANDEX_CLIENT_ID`, `YANDEX_CLIENT_SECRET`.
+- `VK_CLIENT_ID`, `VK_CLIENT_SECRET` (currently unused placeholders).
 
-Swagger dev:
-- Update handler annotations and run `swag init` (see Swagger section).
+### Misc / Optional
+- `GRPC_PORT` (default `50051`), `GRPC_TIMEOUT` (default `24h`): reserved for the future gRPC server.
+- MinIO (currently unused but validated): `MINIO_ROOT_USER`, `MINIO_ROOT_PASSWORD`, `MINIO_ENDPOINT`, `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY`, `MINIO_USE_SSL`, `MINIO_BUCKET_NAME`.
 
-## VPS Deployment (Makefile)
+## Operations & Deployment Notes
 
-Run these commands directly on the VPS in the repo directory:
-- `make deploy` - build and start (detached)
-- `make logs` - tail logs
-- `make down` - stop stack
-- `make rebuild` - rebuild without cache and start
-- `make restart` - restart only `core` service
-- `make migrate` - run migrator one-off (optional)
-- If you use Compose v2 plugin, run with `DC="docker compose"`, e.g.: `make deploy DC="docker compose"`
+### Session & Cookie Behavior
+- Refresh tokens live only in the `refresh_token` cookie, so frontend apps must send requests with `credentials: 'include'`.
+- For cross-site setups (frontend domain != API domain) `COOKIE_SAME_SITE=None` **and** `COOKIE_SECURE=true` are required; serve the API over HTTPS via nginx.
+- Logout marks the access-token JTI as blocked until its original expiry. Password reset confirmation additionally blocklists the password-reset token ID for the remainder of its TTL to prevent reuse.
+- Redis stores per-user sets, so `SessionService.DeleteAllUserSessions` can revoke all outstanding refresh sessions when needed (e.g., password reset).
 
-## Reverse Proxy (nginx) + HTTPS (Let's Encrypt)
+### Email & Password Reset
+- Email confirmation tokens expire after 24 h; password-reset tokens after 7 days. Both are signed using `SMTP_JWT_SECRET` and embed user ID + email + (for resets) JWT ID.
+- Password reset confirmation generates a random 12–16 character password (no reuse of the submitted token), updates the hash in Postgres, revokes every session, optionally warns if stored email differs from token email, and emails the new password via SMTP.
 
-Compose already contains `nginx` and `certbot` services to terminate TLS and proxy to `core`:
+### OAuth Redirect Safety
+- Always include only fully-qualified URLs in `ALLOWED_REDIRECT_URLS`. The backend checks scheme + host equality and ensures the callback path either exactly matches or is beneath the allowed path.
+- The `oauth_state` cookie TTL is 5 minutes; expired or mismatched state/nonce pairs are rejected to prevent CSRF.
 
-1) DNS: point `DOMAIN` (e.g. `id.example.com`) A/AAAA records to your VPS IP.
-2) Set in `.env`:
-   - `DOMAIN=id.example.com`
-   - `PUBLIC_URL=https://id.example.com`
-   - Add your frontends to `ALLOWED_CORS_ORIGINS` and `ALLOWED_REDIRECT_URLS` with https scheme.
-3) Start nginx and core:
-   - `docker compose up -d nginx core` (or `make deploy` to start all)
-4) Issue certificate (webroot challenge):
-   - `docker compose run --rm certbot certonly --webroot -w /var/www/certbot -d $env:DOMAIN --email you@example.com --agree-tos -n` (PowerShell)
-   - Linux shell: `DOMAIN=id.example.com docker compose run --rm certbot certonly --webroot -w /var/www/certbot -d $DOMAIN --email you@example.com --agree-tos -n`
-5) Reload nginx to enable HTTPS:
-   - `docker compose restart nginx` or `docker compose exec nginx nginx -s reload`
-6) Auto‑renew (cron):
-   - Add a cron job on VPS: `0 3 * * * cd /opt/authorization_service && docker compose run --rm certbot renew --webroot -w /var/www/certbot && docker compose exec -T nginx nginx -s reload`
+### Reverse Proxy & TLS
+1. Point DNS for `DOMAIN` to your VPS.
+2. Set `DOMAIN`, `PUBLIC_URL=https://<domain>`, and update `ALLOWED_CORS_ORIGINS` / `ALLOWED_REDIRECT_URLS` with HTTPS origins.
+3. Start core + nginx: `docker compose up -d core nginx`.
+4. Issue certificates via webroot challenge (runs once per domain):
+   ```sh
+   DOMAIN=id.example.com docker compose run --rm certbot \
+     certonly --webroot -w /var/www/certbot \
+     -d "$DOMAIN" --email you@example.com --agree-tos -n
+   ```
+5. Restart nginx: `docker compose restart nginx`.
+6. Automate renewal (cron on VPS, e.g. daily at 3 AM):
+   ```
+   0 3 * * * cd /path/to/authorization_service && \
+     docker compose run --rm certbot renew --webroot -w /var/www/certbot && \
+     docker compose exec -T nginx nginx -s reload
+   ```
+The nginx entrypoint auto-detects certificates; before certs exist it serves HTTP only, afterwards it enforces HTTPS and keeps port 80 for ACME challenges.
 
-Notes
-- nginx config is templated from `nginx/templates` using env `NGINX_HOST` and `CORE_UPSTREAM`. Until the cert exists, nginx serves HTTP only and redirects to HTTPS once cert is present.
-- You can restrict external access to `core` by removing `HTTP_PORT` from `core` ports section if nginx is the only entrypoint.
-- Ensure VPS firewall allows 80 and 443.
+### Deployment Automation
+- Configure `SSH_HOST`, `SSH_USER`, `SSH_PRIVATE_KEY` secrets in GitHub. The `deploy.yml` workflow triggers on pushes to `main` and performs `git pull`, `docker compose build`, `docker compose down`, and `docker compose up -d` on the remote VPS repo clone.
 
-## Security & Deployment Notes
+### Logging & Monitoring
+- Logrus outputs JSON with RFC3339 timestamps by default (`pkg/logger/setup.go`). Optional request/response middlewares live under `internal/transport/http/middlewares/logging.go` (disabled by default—enable if you need detailed request logs).
+- `pkg/logger/interceptor.go` defines a gRPC logging interceptor ready for when the gRPC server goes live.
 
-- Set a strong `JWT_SECRET_KEY` and rotate secrets safely.
-- Use `COOKIE_SECURE=true` and HTTPS in production; consider `SameSite=None` for true cross-site flows.
-- Set `DOMAIN` to a registrable/public domain (or a parent like `.example.com` for subdomains) so cookies are scoped correctly.
-- Configure `ALLOWED_CORS_ORIGINS` and `ALLOWED_REDIRECT_URLS` to the exact frontends you use.
-- Set `PUBLIC_URL` to an https URL in production so OAuth callbacks and email links are correct.
-- Cross‑site setup (backend on domain, frontend on localhost/other domain): set `COOKIE_SAME_SITE=None`, `COOKIE_SECURE=true`, call backend over HTTPS with `credentials: 'include'`.
+### Troubleshooting Tips
+- **“no allowed CORS origins configured” on startup:** ensure `ALLOWED_CORS_ORIGINS` is non-empty.
+- **Cookies missing in browser:** confirm the frontend origin matches an entry in `ALLOWED_CORS_ORIGINS`, `SameSite`/`Secure` flags match your deployment, and requests include credentials.
+- **OAuth callback returns JSON instead of redirect:** provide `redirect_url` and add it (or its origin/path) to `ALLOWED_REDIRECT_URLS`.
+- **Swagger 401/404:** if you enabled Basic Auth, append credentials via browser prompt; set `SWAGGER_ENABLED=true` to expose the UI.
 
-## Troubleshooting
-
-- "Server is running on :8080": `DOMAIN` is empty. When env var is present but empty, default doesn't apply; set `DOMAIN=localhost` (or remove var) so default works.
-- "no allowed CORS origins configured": set `ALLOWED_CORS_ORIGINS` in `.env` (comma-separated) and restart.
-- OAuth callback shows backend page instead of redirect: pass `redirect_url` and allow it in `ALLOWED_REDIRECT_URLS`.
-- CORS or cookies not working: ensure origin is in `ALLOWED_CORS_ORIGINS` and frontend requests use `credentials: 'include'`. For cross-site cookies you may need `Secure` and `SameSite=None`.
-- Email not sent: verify SMTP settings and network egress.
+## Tooling & Future Work
+- `api/sso/v1/*.proto` plus environment variables for gRPC (`GRPC_PORT`, `GRPC_TIMEOUT`) indicate upcoming RPC support.
+- `internal/repository/minio` and `pkg/storage/minio` are ready once object storage is required (bucket existence is validated before use).
+- VK OAuth placeholders share the same pattern as Google/Yandex; complete `internal/service/oauth/vkid_service.go` and wire credentials to support it.
+- Automated tests are currently absent; plan to add unit tests around services (JWT/email/session) and repository integration tests to guard future changes.
 
 ## License
 
-Repository is licensed under the Apache 2.0 license. The terms of the license are detailed in LICENSE.
-
+Licensed under the [Apache License 2.0](LICENSE).
