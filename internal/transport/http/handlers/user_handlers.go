@@ -569,7 +569,7 @@ func UpdateUserAdmin(ctx *gin.Context, a *app.App) {
 // @Param locale query string false "Filter by locale (e.g., ru)"
 // @Param page query int false "Page number" default(1)
 // @Param limit query int false "Page size" default(20)
-// @Success 200 {object} presenters.UserListResponse
+// @Success 200 {object} presenters.UserAdminListResponse
 // @Failure 400 {object} presenters.ErrorResponse
 // @Failure 401 {object} presenters.ErrorResponse
 // @Failure 403 {object} presenters.ErrorResponse
@@ -628,9 +628,10 @@ func ListUsers(ctx *gin.Context, a *app.App) {
 	}
 
 	// Map to presenter
-	items := make([]presenters.UserResponse, 0, len(users))
+	items := make([]presenters.UserAdminResponse, 0, len(users))
 	for _, u := range users {
-		items = append(items, presenters.UserResponse{
+		items = append(items, presenters.UserAdminResponse{
+			ID:             u.ID,
 			FirstName:      u.FirstName,
 			LastName:       u.LastName,
 			Email:          u.Email,
@@ -641,7 +642,7 @@ func ListUsers(ctx *gin.Context, a *app.App) {
 		})
 	}
 
-	ctx.JSON(http.StatusOK, presenters.UserListResponse{
+	ctx.JSON(http.StatusOK, presenters.UserAdminListResponse{
 		Items: items,
 		Total: total,
 		Page:  page,

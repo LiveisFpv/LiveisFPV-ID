@@ -22,6 +22,40 @@ definitions:
       access_token:
         type: string
     type: object
+  presenters.UserAdminListResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/presenters.UserAdminResponse'
+        type: array
+      limit:
+        type: integer
+      page:
+        type: integer
+      total:
+        type: integer
+    type: object
+  presenters.UserAdminResponse:
+    properties:
+      email:
+        type: string
+      email_confirmed:
+        type: boolean
+      first_name:
+        type: string
+      id:
+        type: integer
+      last_name:
+        type: string
+      locale_type:
+        type: string
+      photo:
+        type: string
+      roles:
+        items:
+          type: string
+        type: array
+    type: object
   presenters.UserCreateWithRolesRequest:
     properties:
       email:
@@ -42,19 +76,6 @@ definitions:
     - last_name
     - password
     - roles
-    type: object
-  presenters.UserListResponse:
-    properties:
-      items:
-        items:
-          $ref: '#/definitions/presenters.UserResponse'
-        type: array
-      limit:
-        type: integer
-      page:
-        type: integer
-      total:
-        type: integer
     type: object
   presenters.UserLoginRequest:
     properties:
@@ -180,7 +201,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/presenters.UserListResponse'
+            $ref: '#/definitions/presenters.UserAdminListResponse'
         "400":
           description: Bad Request
           schema:
