@@ -3,6 +3,7 @@ package http
 import (
 	"authorization_service/internal/app"
 	"authorization_service/internal/transport/http/handlers"
+	"authorization_service/internal/transport/http/middlewares"
 
 	"github.com/gin-gonic/gin"
 )
@@ -20,9 +21,10 @@ func MainRouter(r *gin.RouterGroup, a *app.App) {
 	r.GET("/validate", func(ctx *gin.Context) { handlers.Validate(ctx, a) })
 }
 func AdminRouter(r *gin.RouterGroup, a *app.App) {
-	r.GET("/admin/users", func(ctx *gin.Context) { handlers.ListUsers(ctx, a) })
-	r.POST("/admin/users", func(ctx *gin.Context) { handlers.CreateUserWithRoles(ctx, a) })
-	r.PUT("/admin/users/:id", func(ctx *gin.Context) { handlers.UpdateUserAdmin(ctx, a) })
+	admin := r.Group("", middlewares.AdminOnly(a))
+	admin.GET("/admin/users", func(ctx *gin.Context) { handlers.ListUsers(ctx, a) })
+	admin.POST("/admin/users", func(ctx *gin.Context) { handlers.CreateUserWithRoles(ctx, a) })
+	admin.PUT("/admin/users/:id", func(ctx *gin.Context) { handlers.UpdateUserAdmin(ctx, a) })
 }
 func OauthRouter(r *gin.RouterGroup, a *app.App) {
 	r.GET("/google", func(ctx *gin.Context) { handlers.OauthGoogleLogin(ctx, a) })

@@ -21,7 +21,7 @@
                 "tags": [
                     "User"
                 ],
-                "summary": "List users",
+                "summary": "List users (admin)",
                 "parameters": [
                     {
                         "type": "string",
@@ -75,6 +75,12 @@
                             "$ref": "#/definitions/presenters.ErrorResponse"
                         }
                     },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/presenters.ErrorResponse"
+                        }
+                    },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
@@ -121,6 +127,12 @@
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/presenters.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
                         "schema": {
                             "$ref": "#/definitions/presenters.ErrorResponse"
                         }
@@ -180,6 +192,12 @@
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/presenters.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
                         "schema": {
                             "$ref": "#/definitions/presenters.ErrorResponse"
                         }

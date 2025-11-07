@@ -439,6 +439,7 @@ func CreateUser(ctx *gin.Context, a *app.App) {
 // @Param request body presenters.UserCreateWithRolesRequest true "Create request with roles"
 // @Success 201 {object} presenters.UserResponse
 // @Failure 400 {object} presenters.ErrorResponse
+// @Failure 401 {object} presenters.ErrorResponse
 // @Failure 403 {object} presenters.ErrorResponse
 // @Failure 500 {object} presenters.ErrorResponse
 // @Router /auth/admin/users [post]
@@ -489,6 +490,7 @@ func CreateUserWithRoles(ctx *gin.Context, a *app.App) {
 // @Param request body presenters.UserUpdateAdminRequest true "Admin update request"
 // @Success 200 {object} presenters.UserResponse
 // @Failure 400 {object} presenters.ErrorResponse
+// @Failure 401 {object} presenters.ErrorResponse
 // @Failure 404 {object} presenters.ErrorResponse
 // @Failure 403 {object} presenters.ErrorResponse
 // @Failure 500 {object} presenters.ErrorResponse
@@ -556,7 +558,7 @@ func UpdateUserAdmin(ctx *gin.Context, a *app.App) {
 }
 
 // ListUsers
-// @Summary List users
+// @Summary List users (admin)
 // @Description Returns a paginated list of users with optional filtering
 // @Tags User
 // @Accept json
@@ -569,6 +571,7 @@ func UpdateUserAdmin(ctx *gin.Context, a *app.App) {
 // @Param limit query int false "Page size" default(20)
 // @Success 200 {object} presenters.UserListResponse
 // @Failure 400 {object} presenters.ErrorResponse
+// @Failure 401 {object} presenters.ErrorResponse
 // @Failure 403 {object} presenters.ErrorResponse
 // @Failure 500 {object} presenters.ErrorResponse
 // @Router /auth/admin/users [get]

@@ -5,6 +5,8 @@ PUBLIC_URL=
 # Allowed origins (comma-separated)
 ALLOWED_REDIRECT_URLS=http://localhost:5173,http://localhost:8080
 ALLOWED_CORS_ORIGINS=http://localhost:5173,http://localhost:8080
+# Default admin emails (comma-separated)
+DEFAULT_ADMIN_EMAILS=admin@example.com
 
 # Database
 DB_HOST=postgres

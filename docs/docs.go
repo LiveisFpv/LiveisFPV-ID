@@ -27,7 +27,7 @@ const docTemplate = `{
                 "tags": [
                     "User"
                 ],
-                "summary": "List users",
+                "summary": "List users (admin)",
                 "parameters": [
                     {
                         "type": "string",
@@ -81,6 +81,12 @@ const docTemplate = `{
                             "$ref": "#/definitions/presenters.ErrorResponse"
                         }
                     },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/presenters.ErrorResponse"
+                        }
+                    },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
@@ -127,6 +133,12 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/presenters.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
                         "schema": {
                             "$ref": "#/definitions/presenters.ErrorResponse"
                         }
@@ -186,6 +198,12 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/presenters.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
                         "schema": {
                             "$ref": "#/definitions/presenters.ErrorResponse"
                         }
