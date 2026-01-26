@@ -1,6 +1,6 @@
-# LiveisFPV ID (SSO API)
+# LiveisFPV ID (Auth/Identity API)
 
-LiveisFPV ID is a Go-based single sign-on service that powers registration, password authentication, OAuth 2.0 login, secure session refresh, email confirmation, and admin-controlled account management. The API is documented with Swagger, ships with Docker Compose (core, Postgres, Redis, nginx, certbot, migrator), and is wired for future gRPC/MinIO integrations.
+LiveisFPV ID is a Go-based identity and authentication service that powers registration, password authentication, OAuth 2.0 login, secure session refresh, email confirmation, and admin-controlled account management. It provides centralized login and account data across multiple apps. The API is documented with Swagger, ships with Docker Compose (core, Postgres, Redis, nginx, certbot, migrator), and is wired for future gRPC/MinIO integrations.
 
 ## Highlights
 - JWT (HS256) access tokens plus Redis-backed refresh sessions and a token/JTI blocklist for logout and password-reset enforcement.
