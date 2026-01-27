@@ -6,6 +6,7 @@ import (
 	"authorization_service/internal/repository/postgres"
 	"authorization_service/internal/repository/redis"
 	"authorization_service/internal/transport/http"
+	"authorization_service/internal/transport/rpc"
 	"authorization_service/pkg/logger"
 	"authorization_service/pkg/storage"
 	"context"
@@ -59,13 +60,21 @@ func main() {
 			logger.Fatalf("Failed to start HTTP server: %v", err)
 		}
 	}()
+	grpcServer := rpc.New(logger, usecase, cfg.GRPCConfig.Port)
+	logger.Info("Start gRPC server")
+	go func() {
+		if err := grpcServer.Run(); err != nil {
+			logger.Fatalf("Failed to start gRPC server: %v", err)
+		}
+	}()
 	//Wait for interrupt signal to shutdown server
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
 	logger.Info("Shutdown HTTP Server ...")
 
-	// ! Init gRPC
+	// Stop gRPC server
+	grpcServer.Stop()
 
 	// ! Graceful shutdown
 	err = server.Stop(ctx)

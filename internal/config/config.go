@@ -10,6 +10,7 @@ type Config struct {
 	PostgresConfig      PostgresConfig
 	RedisConfig         RedisConfig
 	HttpServerConfig    HTTPServerConfig
+	GRPCConfig          gRPCConfig
 	JWTConfig           JWTConfig
 	CookieConfig        CookieConfig
 	OauthGoogleConfig   OauthGoogleConfig

@@ -1,7 +1,8 @@
 package rpc
 
 import (
-	"authorization_service/internal/transport/rpc/service/sso"
+	"authorization_service/internal/app"
+	"authorization_service/internal/transport/rpc/service/liveid"
 	"fmt"
 	"net"
 
@@ -12,24 +13,25 @@ import (
 type Server struct {
 	log        *logrus.Logger
 	gRPCServer *grpc.Server
-	port       int
+	port       string
 }
 
 func New(
 	log *logrus.Logger,
-	ssoService sso.Sso_service, // ? Мб переименовать и разделить
-	port int,
+	a *app.App,
+	port string,
 ) *Server {
-	// Создаем цепочку интерцепторов
+	// Build interceptor chain.
 	interceptors := NewMiddlewareChain(log)
 
-	// Инициализируем gRPC сервер
+	// Initialize gRPC server.
 	gRPCServer := grpc.NewServer(
 		grpc.ChainUnaryInterceptor(interceptors...),
 	)
 
-	// Регистрируем сервисы
-	sso.Register(gRPCServer, ssoService)
+	// Register services.
+	liveidServer := liveid.New(a)
+	liveid.Register(gRPCServer, liveidServer)
 
 	return &Server{
 		log:        log,
@@ -45,12 +47,12 @@ func (s *Server) MustRun() {
 }
 
 func (s *Server) Run() error {
-	l, err := net.Listen("tcp", fmt.Sprintf(":%d", s.port))
+	l, err := net.Listen("tcp", fmt.Sprintf(":%s", s.port))
 	if err != nil {
 		return fmt.Errorf("failed to listen: %w", err)
 	}
 
-	s.log.Infof("gRPC server started on port %d", s.port)
+	s.log.Infof("gRPC server started on port %s", s.port)
 
 	if err := s.gRPCServer.Serve(l); err != nil {
 		return fmt.Errorf("failed to serve: %w", err)
