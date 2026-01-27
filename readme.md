@@ -1,13 +1,13 @@
 # LiveisFPV ID (Auth/Identity API)
 
-LiveisFPV ID is a Go-based identity and authentication service that powers registration, password authentication, OAuth 2.0 login, secure session refresh, email confirmation, and admin-controlled account management. It provides centralized login and account data across multiple apps. The API is documented with Swagger, ships with Docker Compose (core, Postgres, Redis, nginx, certbot, migrator), and is wired for future gRPC/MinIO integrations.
+LiveisFPV ID is a Go-based identity and authentication service that powers registration, password authentication, OAuth 2.0 login, secure session refresh, email confirmation, and admin-controlled account management. It provides centralized login and account data across multiple apps. The API is documented with Swagger, ships with Docker Compose (core, Postgres, Redis, nginx, certbot, migrator), and exposes an internal gRPC surface alongside HTTP.
 
 ## Highlights
 - JWT (HS256) access tokens plus Redis-backed refresh sessions and a token/JTI blocklist for logout and password-reset enforcement.
 - Self-service registration, email confirmation, profile updates, locale support, password reset with SMTP-delivered one-time links, and admin CRUD with role management.
 - OAuth 2.0 flows for Google and Yandex that use signed state JWTs, nonce cookies, and redirect whitelists; VK endpoints exist as stubs.
 - Reverse-proxy friendly: nginx templates + certbot volumes for HTTPS, optional Swagger Basic Auth, strict CORS/redirect configuration, and Makefile helpers.
-- Tooling includes Air for hot reload, golang-migrate wrapper, generated Swagger spec, GitHub Actions deploy workflow, and proto scaffolding for gRPC.
+- Tooling includes Air for hot reload, golang-migrate wrapper, generated Swagger spec, GitHub Actions deploy workflow, and gRPC proto/generation.
 
 ## Stack & Components
 
@@ -15,6 +15,7 @@ LiveisFPV ID is a Go-based identity and authentication service that powers regis
 | --- | --- | --- |
 | Language/runtime | Go 1.24+ (Dockerfile uses 1.25-alpine) | Modules in `go.mod`; Air handles live reload during `docker compose up`. |
 | HTTP/API | Gin, gin-contrib/cors, logrus, swaggo | Middlewares for admin auth/logging; Swagger served at `/swagger/index.html`. |
+| gRPC | grpc-go + protobuf | Internal API in `api/live_id/v1` (Auth/User services). |
 | Persistence | PostgreSQL 17 (users), Redis 8 (sessions & blocklist) | Redis stores `session:<id>`, `refresh_token:<token>`, `user_sessions:<userID>` and token blocklist entries. |
 | Auth | golang-jwt/jwt/v5, bcrypt, custom session/jwt/email services | JWT TTLs are `CustomDuration`s from env; password reset tokens are signed JWTs with SMTP secret. |
 | Tooling | `tools/migrator` (golang-migrate), `.air.toml`, Makefile, Swagger docs | `swag init` regenerates `docs/swagger.{json,yaml}`. |
@@ -38,7 +39,7 @@ LiveisFPV ID is a Go-based identity and authentication service that powers regis
 ├─ pkg/
 │  ├─ logger/               # logrus setup + gRPC logging interceptor
 │  └─ storage/              # Postgres, Redis, MinIO client helpers
-├─ api/sso/v1/              # proto stubs for future gRPC surface
+├─ api/live_id/v1/         # gRPC proto + generated stubs (internal API)
 ├─ db/migrations/           # SQL migrations (golang-migrate compatible)
 ├─ tools/migrator/          # standalone migrator with CLI flags
 ├─ docs/                    # generated Swagger spec (keep in sync via `swag init`)
@@ -72,13 +73,23 @@ LiveisFPV ID is a Go-based identity and authentication service that powers regis
 - `.air.toml` compiles `./cmd` to `/tmp/main`; the Dockerfile installs Air and runs it so local changes trigger rebuilds inside containers.
 - `tools/migrator` wraps `github.com/golang-migrate/migrate/v4`, forces out of dirty states, and can optionally roll back + reset when a migration fails.
 - `docs/swagger.*` and `docs/docs.go` are generated via `swag init -g cmd/main.go -o docs`; keep comments in handlers up to date.
-- `api/sso/v1/*.proto` plus `pkg/logger/interceptor.go` lay groundwork for a gRPC server (`GRPC_PORT`/`GRPC_TIMEOUT`), although gRPC is not started in `cmd/main.go` yet.
+- `api/live_id/v1/*.proto` plus `pkg/logger/interceptor.go` back the internal gRPC server (`GRPC_PORT`/`GRPC_TIMEOUT`).
 - `pkg/storage/minio.go` and `config.MinioConfig` implement a verified MinIO client (bucket existence check) that you can wire in when user uploads/avatars move to object storage.
 - The nginx container renders templates based on certificate availability: HTTP-only proxy until certs exist; once certs live under `certbot/conf`, HTTPS is enabled and HTTP redirects to HTTPS.
 
 ## API Surface (summary)
 
 Full details (request/response schemas, error payloads, query params) live in [docs/swagger.json](docs/swagger.json) and are served at `http://<DOMAIN>:<HTTP_PORT>/swagger/index.html`.
+
+### gRPC (internal)
+
+The gRPC surface is intentionally smaller than HTTP and is meant for internal service-to-service calls. Services live in `api/live_id/v1`:
+
+- **AuthService**: `Authenticate`, `Validate`
+- **UserService**: `CreateUser`, `UpdateUser`
+
+Access tokens can be supplied either via the `access_token` field (for `UpdateUser`) or `authorization` metadata (`Bearer <token>` or raw token).
+
 
 ### Auth Endpoints
 
@@ -197,7 +208,7 @@ Full details (request/response schemas, error payloads, query params) live in [d
 - `VK_CLIENT_ID`, `VK_CLIENT_SECRET` (currently unused placeholders).
 
 ### Misc / Optional
-- `GRPC_PORT` (default `50051`), `GRPC_TIMEOUT` (default `24h`): reserved for the future gRPC server.
+- `GRPC_PORT` (default `50051`), `GRPC_TIMEOUT` (default `24h`): gRPC listener config (internal API).
 - MinIO (currently unused but validated): `MINIO_ROOT_USER`, `MINIO_ROOT_PASSWORD`, `MINIO_ENDPOINT`, `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY`, `MINIO_USE_SSL`, `MINIO_BUCKET_NAME`.
 
 ## Operations & Deployment Notes
@@ -240,7 +251,7 @@ The nginx entrypoint auto-detects certificates; before certs exist it serves HTT
 
 ### Logging & Monitoring
 - Logrus outputs JSON with RFC3339 timestamps by default (`pkg/logger/setup.go`). Optional request/response middlewares live under `internal/transport/http/middlewares/logging.go` (disabled by default—enable if you need detailed request logs).
-- `pkg/logger/interceptor.go` defines a gRPC logging interceptor ready for when the gRPC server goes live.
+- `pkg/logger/interceptor.go` defines a gRPC logging interceptor used by the internal gRPC server.
 
 ### Troubleshooting Tips
 - **“no allowed CORS origins configured” on startup:** ensure `ALLOWED_CORS_ORIGINS` is non-empty.
@@ -249,7 +260,7 @@ The nginx entrypoint auto-detects certificates; before certs exist it serves HTT
 - **Swagger 401/404:** if you enabled Basic Auth, append credentials via browser prompt; set `SWAGGER_ENABLED=true` to expose the UI.
 
 ## Tooling & Future Work
-- `api/sso/v1/*.proto` plus environment variables for gRPC (`GRPC_PORT`, `GRPC_TIMEOUT`) indicate upcoming RPC support.
+- gRPC is already wired for internal auth/user flows; expand only if another internal consumer requires additional methods.
 - `internal/repository/minio` and `pkg/storage/minio` are ready once object storage is required (bucket existence is validated before use).
 - VK OAuth placeholders share the same pattern as Google/Yandex; complete `internal/service/oauth/vkid_service.go` and wire credentials to support it.
 - Automated tests are currently absent; plan to add unit tests around services (JWT/email/session) and repository integration tests to guard future changes.

@@ -1,0 +1,38 @@
+syntax = "proto3";
+
+package live_id.v1;
+
+option go_package = "authorization_service/api/live_id/v1;liveidv1";
+
+// UserService mirrors user-related internal gRPC endpoints.
+service UserService {
+  rpc CreateUser(UserRegisterRequest) returns (UserResponse);
+  rpc UpdateUser(UserUpdateRequest) returns (UserResponse);
+}
+
+message UserRegisterRequest {
+  string first_name = 1;
+  string last_name = 2;
+  string email = 3;
+  string password = 4;
+}
+
+message UserUpdateRequest {
+  optional string first_name = 1;
+  optional string last_name = 2;
+  optional string email = 3;
+  optional string password = 4;
+  optional string locale_type = 5;
+  // Access token (Bearer or raw token).
+  string access_token = 6;
+}
+
+message UserResponse {
+  string first_name = 1;
+  string last_name = 2;
+  string email = 3;
+  bool email_confirmed = 4;
+  optional string locale_type = 5;
+  repeated string roles = 6;
+  optional string photo = 7;
+}
