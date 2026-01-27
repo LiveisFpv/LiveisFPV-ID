@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package live_id.v1;
+
+option go_package = "authorization_service/api/live_id/v1;liveidv1";
+
+import "google/protobuf/empty.proto";
+import "live_id/v1/user.proto";
+
+// AuthService mirrors the internal gRPC auth endpoints.
+service AuthService {
+  // GET /api/auth/authenticate (Authorization: Bearer <token>)
+  rpc Authenticate(AuthenticateRequest) returns (UserResponse);
+  // GET /api/auth/validate (Authorization: Bearer <token>)
+  rpc Validate(ValidateRequest) returns (google.protobuf.Empty);
+}
+
+message AuthenticateRequest {
+  // Raw access token without "Bearer " prefix.
+  string access_token = 1;
+}
+
+message ValidateRequest {
+  // Raw access token without "Bearer " prefix.
+  string access_token = 1;
+}
