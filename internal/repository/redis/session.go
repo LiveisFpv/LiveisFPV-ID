@@ -1,20 +1,19 @@
 package redis
 
 import (
-    "authorization_service/internal/domain"
-    "context"
-    "fmt"
-    "strconv"
-    "time"
+	"authorization_service/internal/domain"
+	"context"
+	"fmt"
+	"time"
 )
 
 // CreateSession implements repository.SessionRepository.
 func (s *sessionRepository) CreateSession(ctx context.Context, session *domain.Session) error {
-    key := fmt.Sprintf("session:%d", session.SessionID)
-    err := s.redis.Set(ctx, key, session, time.Until(session.ExpiresAt))
-    if err != nil {
-        return fmt.Errorf("%w: %v", domain.ErrorSetSession, err)
-    }
+	key := fmt.Sprintf("session:%s", session.SessionID)
+	err := s.redis.Set(ctx, key, session, time.Until(session.ExpiresAt))
+	if err != nil {
+		return fmt.Errorf("%w: %v", domain.ErrorSetSession, err)
+	}
 
 	userSessionsKey := fmt.Sprintf("user_sessions:%d", session.UserID)
 
@@ -24,24 +23,24 @@ func (s *sessionRepository) CreateSession(ctx context.Context, session *domain.S
 		return fmt.Errorf("%w: %v", domain.ErrorFailedToAddUserSession, err)
 	}
 
-    tokenkey := fmt.Sprintf("refresh_token:%s", session.RefreshToken)
-    err = s.redis.Set(ctx, tokenkey, session, time.Until(session.ExpiresAt))
-    if err != nil {
-        s.redis.Delete(ctx, key)
-        s.redis.SRem(ctx, userSessionsKey, session.SessionID)
-        return fmt.Errorf("%w: %v", domain.ErrorFailedToSetRefreshToken, err)
-    }
+	tokenkey := fmt.Sprintf("refresh_token:%s", session.RefreshToken)
+	err = s.redis.Set(ctx, tokenkey, session, time.Until(session.ExpiresAt))
+	if err != nil {
+		s.redis.Delete(ctx, key)
+		s.redis.SRem(ctx, userSessionsKey, session.SessionID)
+		return fmt.Errorf("%w: %v", domain.ErrorFailedToSetRefreshToken, err)
+	}
 
 	return nil
 }
 
 // DeleteSession implements repository.SessionRepository.
-func (s *sessionRepository) DeleteSession(ctx context.Context, sessionID int) error {
+func (s *sessionRepository) DeleteSession(ctx context.Context, sessionID string) error {
 	session, err := s.GetSession(ctx, sessionID)
 	if err != nil {
 		return err
 	}
-	key := fmt.Sprintf("session:%d", sessionID)
+	key := fmt.Sprintf("session:%s", sessionID)
 	err = s.redis.Delete(ctx, key)
 	if err != nil {
 		return fmt.Errorf("%w: %v", domain.ErrorFailedToDeleteSession, err)
@@ -70,7 +69,7 @@ func (s *sessionRepository) GetAllUserSessions(ctx context.Context, userID int) 
 	}
 	sessions := make([]*domain.Session, 0, len(sessionIDs))
 	for _, idStr := range sessionIDs {
-		id, _ := strconv.Atoi(idStr)
+		id := idStr
 		session, err := s.GetSession(ctx, id)
 		if err == nil {
 			sessions = append(sessions, session)
@@ -81,8 +80,8 @@ func (s *sessionRepository) GetAllUserSessions(ctx context.Context, userID int) 
 }
 
 // GetSession implements repository.SessionRepository.
-func (s *sessionRepository) GetSession(ctx context.Context, sessionID int) (*domain.Session, error) {
-	key := fmt.Sprintf("session:%d", sessionID)
+func (s *sessionRepository) GetSession(ctx context.Context, sessionID string) (*domain.Session, error) {
+	key := fmt.Sprintf("session:%s", sessionID)
 	session := &domain.Session{}
 	err := s.redis.Get(ctx, key, session)
 	if err != nil {

@@ -6,7 +6,7 @@ import (
 )
 
 type Session struct {
-	SessionID    int
+	SessionID    string
 	UserID       int
 	RefreshToken string
 	JTI          string

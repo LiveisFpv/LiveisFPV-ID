@@ -43,10 +43,10 @@ type UserListFilter struct {
 
 type SessionRepository interface {
 	CreateSession(ctx context.Context, session *domain.Session) error
-	GetSession(ctx context.Context, sessionID int) (*domain.Session, error)
+	GetSession(ctx context.Context, sessionID string) (*domain.Session, error)
 	GetSessionByRefreshToken(ctx context.Context, refreshToken string) (*domain.Session, error)
 	GetAllUserSessions(ctx context.Context, userID int) ([]*domain.Session, error)
-	DeleteSession(ctx context.Context, sessionID int) error
+	DeleteSession(ctx context.Context, sessionID string) error
 }
 
 type TokenBlocklist interface {

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
 )
 
@@ -15,7 +16,7 @@ type SessionService interface {
 	CreateSession(ctx context.Context, refreshToken string, access_jti string) (*domain.Session, error)
 	GetSessionByRefreshToken(ctx context.Context, token string) (*domain.Session, error)
 	GetAllUserSessions(ctx context.Context, userID int) ([]*domain.Session, error)
-	DeleteSession(ctx context.Context, sessionID int) error
+	DeleteSession(ctx context.Context, sessionID string) error
 	DeleteAllUserSessions(ctx context.Context, userID int) error
 	ValidateSession(ctx context.Context, refreshToken string) (*domain.Session, error)
 }
@@ -52,6 +53,7 @@ func (s *sessionService) CreateSession(ctx context.Context, refreshToken string,
 	}
 
 	session := &domain.Session{
+		SessionID:    uuid.NewString(),
 		UserID:       claims.UserID,
 		RefreshToken: refreshToken,
 		UserAgent:    "",
@@ -83,7 +85,7 @@ func (s *sessionService) DeleteAllUserSessions(ctx context.Context, userID int) 
 }
 
 // DeleteSession implements SessionService.
-func (s *sessionService) DeleteSession(ctx context.Context, sessionID int) error {
+func (s *sessionService) DeleteSession(ctx context.Context, sessionID string) error {
 	session, err := s.sessionRepository.GetSession(ctx, sessionID)
 	if err != nil || session == nil {
 		return domain.ErrorSessionNotFound
