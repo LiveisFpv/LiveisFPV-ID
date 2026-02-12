@@ -1,0 +1,18 @@
+services:
+  k6:
+    image: grafana/k6:latest
+    ports:
+      - "5665:5665"
+    volumes:
+      - ./k6:/scripts
+    environment:
+      BASE_URL: ""
+      LOGIN: ""
+      PASSWORD: ""
+      STRICT: "0"
+      K6_WEB_DASHBOARD: "true"
+      K6_WEB_DASHBOARD_HOST: "0.0.0.0"
+      K6_WEB_DASHBOARD_PORT: "5665"
+      K6_WEB_DASHBOARD_EXPORT: "/scripts/report.html"
+    entrypoint: ["/bin/sh", "-c"]
+    command: ["k6 run /scripts/sso_flow.js || true"]
