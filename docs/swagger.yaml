@@ -158,8 +158,6 @@ definitions:
         items:
           type: string
         type: array
-    required:
-    - roles
     type: object
   presenters.UserUpdateRequest:
     properties:

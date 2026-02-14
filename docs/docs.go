@@ -1042,9 +1042,6 @@ const docTemplate = `{
         },
         "presenters.UserUpdateAdminRequest": {
             "type": "object",
-            "required": [
-                "roles"
-            ],
             "properties": {
                 "email": {
                     "type": "string",
