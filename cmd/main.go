@@ -7,6 +7,7 @@ import (
 	"authorization_service/internal/repository/redis"
 	"authorization_service/internal/transport/http"
 	"authorization_service/internal/transport/rpc"
+	"authorization_service/internal/validation"
 	"authorization_service/pkg/logger"
 	"authorization_service/pkg/storage"
 	"context"
@@ -17,11 +18,13 @@ import (
 )
 
 // @title SSO API
-// @version 0.1
+// @version 1.0
 // @description SSO для регистрации и авторизации сервисов
 // @host localhost:8080
 // @BasePath /api
 func main() {
+	// Init validator
+	validation.Init()
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	// ! Init logger

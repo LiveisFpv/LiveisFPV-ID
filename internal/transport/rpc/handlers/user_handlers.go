@@ -5,6 +5,8 @@ import (
 	"authorization_service/internal/app"
 	"authorization_service/internal/domain"
 	"authorization_service/internal/service"
+	"authorization_service/internal/transport/dto"
+	"authorization_service/internal/validation"
 	"context"
 	"errors"
 
@@ -24,6 +26,16 @@ func NewUserHandler(a *app.App) *UserHandler {
 func (h *UserHandler) CreateUser(ctx context.Context, req *liveidv1.UserRegisterRequest) (*liveidv1.UserResponse, error) {
 	if req.GetFirstName() == "" || req.GetLastName() == "" || req.GetEmail() == "" || req.GetPassword() == "" {
 		return nil, status.Error(codes.InvalidArgument, "first_name, last_name, email, and password are required")
+	}
+	register := &dto.RegisterRequest{
+		FirstName: req.GetFirstName(),
+		LastName:  req.GetLastName(),
+		Email:     req.GetEmail(),
+		Password:  req.GetPassword(),
+	}
+	err := validation.Valid.Struct(register)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid validation: %s", err)
 	}
 	user := &domain.User{
 		FirstName: req.GetFirstName(),
@@ -46,11 +58,21 @@ func (h *UserHandler) UpdateUser(ctx context.Context, req *liveidv1.UserUpdateRe
 	if err != nil {
 		return nil, err
 	}
+	updatereq := &dto.UserUpdateRequest{
+		FirstName:  req.FirstName,
+		LastName:   req.LastName,
+		Email:      req.Email,
+		Password:   req.Password,
+		LocaleType: req.LocaleType,
+	}
+	err = validation.Valid.Struct(updatereq)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid validation: %s", err)
+	}
 	current, err := h.app.AuthService.Authenticate(ctx, accessToken)
 	if err != nil {
 		return nil, status.Errorf(codes.Unauthenticated, "authentication failed: %v", err)
 	}
-
 	updated := &domain.User{
 		FirstName:  current.FirstName,
 		LastName:   current.LastName,
