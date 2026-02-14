@@ -6,6 +6,7 @@ import (
 	"authorization_service/internal/repository"
 	"authorization_service/internal/service"
 	"authorization_service/internal/transport/http/presenters"
+	"authorization_service/internal/validation"
 	"errors"
 	"fmt"
 	"net/http"
@@ -192,6 +193,12 @@ func UpdateUser(ctx *gin.Context, a *app.App) {
 		ctx.JSON(http.StatusBadRequest, presenters.Error(fmt.Errorf("invalid request: %w", err)))
 		return
 	}
+	err := validation.Valid.Struct(req)
+	if err != nil {
+		resp := presenters.Error(fmt.Errorf("invalid validation: %w", err))
+		ctx.JSON(http.StatusBadRequest, resp)
+		return
+	}
 
 	current, err := a.AuthService.Authenticate(ctx, accessToken)
 	if err != nil {
@@ -283,7 +290,12 @@ func RequestPasswordReset(ctx *gin.Context, a *app.App) {
 		ctx.JSON(http.StatusBadRequest, presenters.Error(fmt.Errorf("invalid request: %w", err)))
 		return
 	}
-
+	err := validation.Valid.Struct(req)
+	if err != nil {
+		resp := presenters.Error(fmt.Errorf("invalid validation: %w", err))
+		ctx.JSON(http.StatusBadRequest, resp)
+		return
+	}
 	if err := a.AuthService.RequestPasswordReset(ctx, req.Email); err != nil {
 		ctx.JSON(http.StatusInternalServerError, presenters.Error(fmt.Errorf("password reset request failed: %w", err)))
 		return
@@ -344,6 +356,12 @@ func Login(ctx *gin.Context, a *app.App) {
 		ctx.JSON(http.StatusBadRequest, resp)
 		return
 	}
+	err := validation.Valid.Struct(req)
+	if err != nil {
+		resp := presenters.Error(fmt.Errorf("invalid validation: %w", err))
+		ctx.JSON(http.StatusBadRequest, resp)
+		return
+	}
 	tokens, err := a.AuthService.Login(ctx, req.Login, req.Password)
 	if err != nil {
 		resp := presenters.Error(fmt.Errorf("login failed: %w", err))
@@ -372,6 +390,12 @@ func CreateUser(ctx *gin.Context, a *app.App) {
 	var req presenters.UserRegisterRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		resp := presenters.Error(fmt.Errorf("invalid request: %w", err))
+		ctx.JSON(http.StatusBadRequest, resp)
+		return
+	}
+	err := validation.Valid.Struct(req)
+	if err != nil {
+		resp := presenters.Error(fmt.Errorf("invalid validation: %w", err))
 		ctx.JSON(http.StatusBadRequest, resp)
 		return
 	}
@@ -423,7 +447,12 @@ func CreateUserWithRoles(ctx *gin.Context, a *app.App) {
 		ctx.JSON(http.StatusBadRequest, presenters.Error(fmt.Errorf("invalid request: %w", err)))
 		return
 	}
-
+	err := validation.Valid.Struct(req)
+	if err != nil {
+		resp := presenters.Error(fmt.Errorf("invalid validation: %w", err))
+		ctx.JSON(http.StatusBadRequest, resp)
+		return
+	}
 	password := req.Password
 	user := &domain.User{
 		FirstName: req.FirstName,
@@ -482,7 +511,12 @@ func UpdateUserAdmin(ctx *gin.Context, a *app.App) {
 		ctx.JSON(http.StatusBadRequest, presenters.Error(fmt.Errorf("invalid request: %w", err)))
 		return
 	}
-
+	err = validation.Valid.Struct(req)
+	if err != nil {
+		resp := presenters.Error(fmt.Errorf("invalid validation: %w", err))
+		ctx.JSON(http.StatusBadRequest, resp)
+		return
+	}
 	updated := &domain.User{
 		ID:        userID,
 		FirstName: "",
