@@ -1,23 +1,23 @@
 package presenters
 
 type UserLoginRequest struct {
-	Login    string `json:"login" binding:"required"`
-	Password string `json:"password" binding:"required"`
+	Login    string `json:"login" binding:"required" validate:"required,max=128"`
+	Password string `json:"password" binding:"required" validate:"required,min=8,max=40,password"`
 }
 
 type UserRegisterRequest struct {
-	FirstName string `json:"first_name" binding:"required"`
-	LastName  string `json:"last_name" binding:"required"`
-	Email     string `json:"email" binding:"required,email"`
-	Password  string `json:"password" binding:"required"`
+	FirstName string `json:"first_name" binding:"required" validate:"required,max=128"`
+	LastName  string `json:"last_name" binding:"required" validate:"required,max=128"`
+	Email     string `json:"email" binding:"required,email" validate:"required,email,max=128"`
+	Password  string `json:"password" binding:"required" validate:"required,min=8,max=40,password"`
 }
 
 type UserCreateWithRolesRequest struct {
-	FirstName string   `json:"first_name" binding:"required"`
-	LastName  string   `json:"last_name" binding:"required"`
-	Email     string   `json:"email" binding:"required,email"`
-	Password  string   `json:"password" binding:"required"`
-	Roles     []string `json:"roles" binding:"required"`
+	FirstName string   `json:"first_name" binding:"required" validate:"required,max=128"`
+	LastName  string   `json:"last_name" binding:"required" validate:"required,max=128"`
+	Email     string   `json:"email" binding:"required,email" validate:"required,email,max=128"`
+	Password  string   `json:"password" binding:"required" validate:"required,min=8,max=40,password"`
+	Roles     []string `json:"roles" binding:"required" validate:"required"`
 }
 
 type EmailConfirmationToken struct {
@@ -26,24 +26,24 @@ type EmailConfirmationToken struct {
 	Email  string
 }
 type UserUpdateRequest struct {
-	FirstName  *string `json:"first_name"`
-	LastName   *string `json:"last_name"`
-	Email      *string `json:"email"`
-	Password   *string `json:"password"`
-	LocaleType *string `json:"locale_type" example:"ru-RU"`
+	FirstName  *string `json:"first_name" validate:"omitempty,max=128"`
+	LastName   *string `json:"last_name" validate:"omitempty,max=128"`
+	Email      *string `json:"email" validate:"email,omitempty,max=128"`
+	Password   *string `json:"password" validate:"min=8,omitempty,max=40,password"`
+	LocaleType *string `json:"locale_type" example:"ru-RU" validate:"omitempty"`
 }
 
 type UserUpdateAdminRequest struct {
-	FirstName  *string   `json:"first_name"`
-	LastName   *string   `json:"last_name"`
-	Email      *string   `json:"email"`
-	Password   *string   `json:"password"`
-	LocaleType *string   `json:"locale_type" example:"ru-RU"`
-	Roles      *[]string `json:"roles" binding:"required"`
+	FirstName  *string   `json:"first_name" validate:"omitempty,max=128"`
+	LastName   *string   `json:"last_name" validate:"omitempty,max=128"`
+	Email      *string   `json:"email" validate:"email,omitempty,max=128"`
+	Password   *string   `json:"password" validate:"min=8,omitempty,max=40,password"`
+	LocaleType *string   `json:"locale_type" example:"ru-RU" validate:"omitempty"`
+	Roles      *[]string `json:"roles" binding:"required" validate:"omitempty"`
 }
 
 type PasswordResetRequest struct {
-	Email string `json:"email" binding:"required,email"`
+	Email string `json:"email" binding:"required,email" validate:"required,email,max=128"`
 }
 
 type PasswordResetResponse struct {
