@@ -11,16 +11,16 @@ type UserCreateWithRolesRequest struct {
 type UserUpdateRequest struct {
 	FirstName  *string `validate:"omitempty,max=128"`
 	LastName   *string `validate:"omitempty,max=128"`
-	Email      *string `validate:"email,omitempty,max=128"`
-	Password   *string `validate:"min=8,omitempty,max=40,password"`
+	Email      *string `validate:"omitempty,email,max=128"`
+	Password   *string `validate:"omitempty,min=8,max=40,password"`
 	LocaleType *string `example:"ru-RU" validate:"omitempty"`
 }
 
 type UserUpdateAdminRequest struct {
 	FirstName  *string   `validate:"omitempty,max=128"`
 	LastName   *string   `validate:"omitempty,max=128"`
-	Email      *string   `validate:"email,omitempty,max=128"`
-	Password   *string   `validate:"min=8,omitempty,max=40,password"`
+	Email      *string   `validate:"omitempty,email,max=128"`
+	Password   *string   `validate:"omitempty,min=8,max=40,password"`
 	LocaleType *string   `example:"ru-RU" validate:"omitempty"`
 	Roles      *[]string `validate:"omitempty"`
 }
