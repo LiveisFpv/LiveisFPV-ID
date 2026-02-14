@@ -60,8 +60,6 @@ services:
         condition: service_completed_successfully
       redis:
         condition: service_started
-    volumes:
-      - ./:/app
     networks:
       - grpc_network
       - storage_network
