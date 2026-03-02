@@ -25,9 +25,8 @@ jobs:
           ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
             cd ~/LiveisFPV-ID
             git pull origin main
-            PROJECT=liveisfpv_id
-            docker compose -p "$PROJECT" down --remove-orphans --rmi local
-            docker compose -p "$PROJECT" up -d --build --remove-orphans
-            docker image prune -af --filter "label=com.docker.compose.project=$PROJECT" --filter "until=24h"
+            docker compose down --remove-orphans
+            docker compose up -d --build
+            docker image prune -af --filter "until=24h"
             docker builder prune -af --filter "until=24h"
           EOF
