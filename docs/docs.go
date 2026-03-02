@@ -857,7 +857,8 @@ const docTemplate = `{
             ],
             "properties": {
                 "email": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 128
                 }
             }
         },
@@ -940,16 +941,21 @@ const docTemplate = `{
             ],
             "properties": {
                 "email": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 128
                 },
                 "first_name": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 128
                 },
                 "last_name": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 128
                 },
                 "password": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 40,
+                    "minLength": 8
                 },
                 "roles": {
                     "type": "array",
@@ -967,10 +973,13 @@ const docTemplate = `{
             ],
             "properties": {
                 "login": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 128
                 },
                 "password": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 40,
+                    "minLength": 8
                 }
             }
         },
@@ -984,16 +993,21 @@ const docTemplate = `{
             ],
             "properties": {
                 "email": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 128
                 },
                 "first_name": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 128
                 },
                 "last_name": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 128
                 },
                 "password": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 40,
+                    "minLength": 8
                 }
             }
         },
@@ -1028,25 +1042,27 @@ const docTemplate = `{
         },
         "presenters.UserUpdateAdminRequest": {
             "type": "object",
-            "required": [
-                "roles"
-            ],
             "properties": {
                 "email": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 128
                 },
                 "first_name": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 128
                 },
                 "last_name": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 128
                 },
                 "locale_type": {
                     "type": "string",
                     "example": "ru-RU"
                 },
                 "password": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 40,
+                    "minLength": 8
                 },
                 "roles": {
                     "type": "array",
@@ -1060,20 +1076,25 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "email": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 128
                 },
                 "first_name": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 128
                 },
                 "last_name": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 128
                 },
                 "locale_type": {
                     "type": "string",
                     "example": "ru-RU"
                 },
                 "password": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 40,
+                    "minLength": 8
                 }
             }
         }
@@ -1082,7 +1103,7 @@ const docTemplate = `{
 
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
-	Version:          "0.1",
+	Version:          "1.0",
 	Host:             "localhost:8080",
 	BasePath:         "/api",
 	Schemes:          []string{},

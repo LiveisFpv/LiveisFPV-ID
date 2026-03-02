@@ -5,7 +5,9 @@ import (
 	"authorization_service/internal/domain"
 	"authorization_service/internal/repository"
 	"authorization_service/internal/service"
+	"authorization_service/internal/transport/dto"
 	"authorization_service/internal/transport/http/presenters"
+	"authorization_service/internal/validation"
 	"errors"
 	"fmt"
 	"net/http"
@@ -14,32 +16,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 )
-
-// setCookieWithConfig sets cookie with SameSite from config.
-func setCookieWithConfig(ctx *gin.Context, a *app.App, name, value string, maxAge int) {
-	cfg := a.Config.CookieConfig
-	http.SetCookie(ctx.Writer, &http.Cookie{
-		Name:     name,
-		Value:    value,
-		Path:     cfg.Path,
-		Domain:   cfg.Domain,
-		MaxAge:   maxAge,
-		HttpOnly: cfg.HttpOnly,
-		Secure:   cfg.Secure,
-		SameSite: func() http.SameSite {
-			switch cfgSame := cfg.SameSite; cfgSame {
-			case "None", "none":
-				return http.SameSiteNoneMode
-			case "Strict", "strict":
-				return http.SameSiteStrictMode
-			case "Lax", "lax":
-				fallthrough
-			default:
-				return http.SameSiteLaxMode
-			}
-		}(),
-	})
-}
 
 // Logout
 // @Summary Logout user
@@ -219,6 +195,21 @@ func UpdateUser(ctx *gin.Context, a *app.App) {
 		return
 	}
 
+	userUpdateReq := &dto.UserUpdateRequest{
+		FirstName:  req.FirstName,
+		LastName:   req.LastName,
+		Email:      req.Email,
+		Password:   req.Password,
+		LocaleType: req.LocaleType,
+	}
+	err := validation.Valid.Struct(userUpdateReq)
+
+	if err != nil {
+		resp := presenters.Error(fmt.Errorf("invalid validation: %w", err))
+		ctx.JSON(http.StatusBadRequest, resp)
+		return
+	}
+
 	current, err := a.AuthService.Authenticate(ctx, accessToken)
 	if err != nil {
 		ctx.JSON(http.StatusUnauthorized, presenters.Error(fmt.Errorf("authentication failed: %w", err)))
@@ -234,20 +225,20 @@ func UpdateUser(ctx *gin.Context, a *app.App) {
 		Photo:      current.Photo,
 		LocaleType: current.LocaleType,
 	}
-	if req.FirstName != nil {
-		updated.FirstName = *req.FirstName
+	if userUpdateReq.FirstName != nil {
+		updated.FirstName = *userUpdateReq.FirstName
 	}
-	if req.LastName != nil {
-		updated.LastName = *req.LastName
+	if userUpdateReq.LastName != nil {
+		updated.LastName = *userUpdateReq.LastName
 	}
-	if req.Email != nil {
-		updated.Email = *req.Email
+	if userUpdateReq.Email != nil {
+		updated.Email = *userUpdateReq.Email
 	}
-	if req.Password != nil {
-		updated.Password = req.Password
+	if userUpdateReq.Password != nil {
+		updated.Password = userUpdateReq.Password
 	}
-	if req.LocaleType != nil {
-		updated.LocaleType = req.LocaleType
+	if userUpdateReq.LocaleType != nil {
+		updated.LocaleType = userUpdateReq.LocaleType
 	}
 
 	user, err := a.AuthService.UpdateUser(ctx, accessToken, updated)
@@ -309,8 +300,16 @@ func RequestPasswordReset(ctx *gin.Context, a *app.App) {
 		ctx.JSON(http.StatusBadRequest, presenters.Error(fmt.Errorf("invalid request: %w", err)))
 		return
 	}
-
-	if err := a.AuthService.RequestPasswordReset(ctx, req.Email); err != nil {
+	passwordResetReq := &dto.PasswordResetRequest{
+		Email: req.Email,
+	}
+	err := validation.Valid.Struct(passwordResetReq)
+	if err != nil {
+		resp := presenters.Error(fmt.Errorf("invalid validation: %w", err))
+		ctx.JSON(http.StatusBadRequest, resp)
+		return
+	}
+	if err := a.AuthService.RequestPasswordReset(ctx, passwordResetReq.Email); err != nil {
 		ctx.JSON(http.StatusInternalServerError, presenters.Error(fmt.Errorf("password reset request failed: %w", err)))
 		return
 	}
@@ -370,7 +369,17 @@ func Login(ctx *gin.Context, a *app.App) {
 		ctx.JSON(http.StatusBadRequest, resp)
 		return
 	}
-	tokens, err := a.AuthService.Login(ctx, req.Login, req.Password)
+	userLoginReq := &dto.LoginRequest{
+		Login:    req.Login,
+		Password: req.Password,
+	}
+	err := validation.Valid.Struct(userLoginReq)
+	if err != nil {
+		resp := presenters.Error(fmt.Errorf("invalid validation: %w", err))
+		ctx.JSON(http.StatusBadRequest, resp)
+		return
+	}
+	tokens, err := a.AuthService.Login(ctx, userLoginReq.Login, userLoginReq.Password)
 	if err != nil {
 		resp := presenters.Error(fmt.Errorf("login failed: %w", err))
 		ctx.JSON(http.StatusUnauthorized, resp)
@@ -402,11 +411,23 @@ func CreateUser(ctx *gin.Context, a *app.App) {
 		return
 	}
 	password := req.Password
-	user := &domain.User{
+	userRegisterReq := &dto.RegisterRequest{
 		FirstName: req.FirstName,
 		LastName:  req.LastName,
 		Email:     req.Email,
-		Password:  &password,
+		Password:  password,
+	}
+	err := validation.Valid.Struct(userRegisterReq)
+	if err != nil {
+		resp := presenters.Error(fmt.Errorf("invalid validation: %w", err))
+		ctx.JSON(http.StatusBadRequest, resp)
+		return
+	}
+	user := &domain.User{
+		FirstName: userRegisterReq.FirstName,
+		LastName:  userRegisterReq.LastName,
+		Email:     userRegisterReq.Email,
+		Password:  &userRegisterReq.Password,
 	}
 	created, err := a.AuthService.CreateUser(ctx, user)
 	if err == service.ErrUserExists {
@@ -449,14 +470,27 @@ func CreateUserWithRoles(ctx *gin.Context, a *app.App) {
 		ctx.JSON(http.StatusBadRequest, presenters.Error(fmt.Errorf("invalid request: %w", err)))
 		return
 	}
-
 	password := req.Password
-	user := &domain.User{
+	createUserReq := &dto.UserCreateWithRolesRequest{
 		FirstName: req.FirstName,
 		LastName:  req.LastName,
 		Email:     req.Email,
-		Password:  &password,
+		Password:  password,
 		Roles:     req.Roles,
+	}
+	err := validation.Valid.Struct(createUserReq)
+	if err != nil {
+		resp := presenters.Error(fmt.Errorf("invalid validation: %w", err))
+		ctx.JSON(http.StatusBadRequest, resp)
+		return
+	}
+
+	user := &domain.User{
+		FirstName: createUserReq.FirstName,
+		LastName:  createUserReq.LastName,
+		Email:     createUserReq.Email,
+		Password:  &createUserReq.Password,
+		Roles:     createUserReq.Roles,
 	}
 
 	created, err := a.AuthService.CreateUser(ctx, user)
@@ -508,7 +542,20 @@ func UpdateUserAdmin(ctx *gin.Context, a *app.App) {
 		ctx.JSON(http.StatusBadRequest, presenters.Error(fmt.Errorf("invalid request: %w", err)))
 		return
 	}
-
+	userUpdateReq := &dto.UserUpdateAdminRequest{
+		FirstName:  req.FirstName,
+		LastName:   req.LastName,
+		Email:      req.Email,
+		Password:   req.Password,
+		LocaleType: req.LocaleType,
+		Roles:      req.Roles,
+	}
+	err = validation.Valid.Struct(userUpdateReq)
+	if err != nil {
+		resp := presenters.Error(fmt.Errorf("invalid validation: %w", err))
+		ctx.JSON(http.StatusBadRequest, resp)
+		return
+	}
 	updated := &domain.User{
 		ID:        userID,
 		FirstName: "",
@@ -517,23 +564,23 @@ func UpdateUserAdmin(ctx *gin.Context, a *app.App) {
 		Password:  nil,
 		Roles:     nil,
 	}
-	if req.FirstName != nil {
-		updated.FirstName = *req.FirstName
+	if userUpdateReq.FirstName != nil {
+		updated.FirstName = *userUpdateReq.FirstName
 	}
-	if req.LastName != nil {
-		updated.LastName = *req.LastName
+	if userUpdateReq.LastName != nil {
+		updated.LastName = *userUpdateReq.LastName
 	}
-	if req.Email != nil {
-		updated.Email = *req.Email
+	if userUpdateReq.Email != nil {
+		updated.Email = *userUpdateReq.Email
 	}
-	if req.Password != nil {
-		updated.Password = req.Password
+	if userUpdateReq.Password != nil {
+		updated.Password = userUpdateReq.Password
 	}
-	if req.LocaleType != nil {
-		updated.LocaleType = req.LocaleType
+	if userUpdateReq.LocaleType != nil {
+		updated.LocaleType = userUpdateReq.LocaleType
 	}
-	if req.Roles != nil {
-		updated.Roles = *req.Roles
+	if userUpdateReq.Roles != nil {
+		updated.Roles = *userUpdateReq.Roles
 	}
 
 	user, err := a.AuthService.UpdateUserAdmin(ctx, updated)

@@ -4,7 +4,7 @@
         "description": "SSO для регистрации и авторизации сервисов",
         "title": "SSO API",
         "contact": {},
-        "version": "0.1"
+        "version": "1.0"
     },
     "host": "localhost:8080",
     "basePath": "/api",
@@ -851,7 +851,8 @@
             ],
             "properties": {
                 "email": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 128
                 }
             }
         },
@@ -934,16 +935,21 @@
             ],
             "properties": {
                 "email": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 128
                 },
                 "first_name": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 128
                 },
                 "last_name": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 128
                 },
                 "password": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 40,
+                    "minLength": 8
                 },
                 "roles": {
                     "type": "array",
@@ -961,10 +967,13 @@
             ],
             "properties": {
                 "login": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 128
                 },
                 "password": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 40,
+                    "minLength": 8
                 }
             }
         },
@@ -978,16 +987,21 @@
             ],
             "properties": {
                 "email": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 128
                 },
                 "first_name": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 128
                 },
                 "last_name": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 128
                 },
                 "password": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 40,
+                    "minLength": 8
                 }
             }
         },
@@ -1022,25 +1036,27 @@
         },
         "presenters.UserUpdateAdminRequest": {
             "type": "object",
-            "required": [
-                "roles"
-            ],
             "properties": {
                 "email": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 128
                 },
                 "first_name": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 128
                 },
                 "last_name": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 128
                 },
                 "locale_type": {
                     "type": "string",
                     "example": "ru-RU"
                 },
                 "password": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 40,
+                    "minLength": 8
                 },
                 "roles": {
                     "type": "array",
@@ -1054,20 +1070,25 @@
             "type": "object",
             "properties": {
                 "email": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 128
                 },
                 "first_name": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 128
                 },
                 "last_name": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 128
                 },
                 "locale_type": {
                     "type": "string",
                     "example": "ru-RU"
                 },
                 "password": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 40,
+                    "minLength": 8
                 }
             }
         }

@@ -8,6 +8,7 @@ definitions:
   presenters.PasswordResetRequest:
     properties:
       email:
+        maxLength: 128
         type: string
     required:
     - email
@@ -59,12 +60,17 @@ definitions:
   presenters.UserCreateWithRolesRequest:
     properties:
       email:
+        maxLength: 128
         type: string
       first_name:
+        maxLength: 128
         type: string
       last_name:
+        maxLength: 128
         type: string
       password:
+        maxLength: 40
+        minLength: 8
         type: string
       roles:
         items:
@@ -80,8 +86,11 @@ definitions:
   presenters.UserLoginRequest:
     properties:
       login:
+        maxLength: 128
         type: string
       password:
+        maxLength: 40
+        minLength: 8
         type: string
     required:
     - login
@@ -90,12 +99,17 @@ definitions:
   presenters.UserRegisterRequest:
     properties:
       email:
+        maxLength: 128
         type: string
       first_name:
+        maxLength: 128
         type: string
       last_name:
+        maxLength: 128
         type: string
       password:
+        maxLength: 40
+        minLength: 8
         type: string
     required:
     - email
@@ -125,35 +139,43 @@ definitions:
   presenters.UserUpdateAdminRequest:
     properties:
       email:
+        maxLength: 128
         type: string
       first_name:
+        maxLength: 128
         type: string
       last_name:
+        maxLength: 128
         type: string
       locale_type:
         example: ru-RU
         type: string
       password:
+        maxLength: 40
+        minLength: 8
         type: string
       roles:
         items:
           type: string
         type: array
-    required:
-    - roles
     type: object
   presenters.UserUpdateRequest:
     properties:
       email:
+        maxLength: 128
         type: string
       first_name:
+        maxLength: 128
         type: string
       last_name:
+        maxLength: 128
         type: string
       locale_type:
         example: ru-RU
         type: string
       password:
+        maxLength: 40
+        minLength: 8
         type: string
     type: object
 host: localhost:8080
@@ -161,7 +183,7 @@ info:
   contact: {}
   description: SSO для регистрации и авторизации сервисов
   title: SSO API
-  version: "0.1"
+  version: "1.0"
 paths:
   /auth/admin/users:
     get:
