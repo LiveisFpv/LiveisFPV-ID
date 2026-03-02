@@ -313,6 +313,14 @@ func (ur *userRepository) UpdatePassword(ctx context.Context, userID int, passwo
 	return nil
 }
 
+func (ur *userRepository) DeleteUser(ctx context.Context, userID int) error {
+	query := `DELETE FROM users WHERE id = $1`
+	if _, err := ur.db.Exec(ctx, query, userID); err != nil {
+		return fmt.Errorf("failed to delete user with error: %w", err)
+	}
+	return nil
+}
+
 // ListUsers returns users matching filter with pagination and total count
 func (ur *userRepository) ListUsers(ctx context.Context, filter repository.UserListFilter, page, limit int) ([]*domain.User, int, error) {
 	if page <= 0 {

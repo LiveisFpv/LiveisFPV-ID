@@ -27,6 +27,7 @@ type UserRepository interface {
 	ConfirmEmail(ctx context.Context, userID int) error
 	// ListUsers returns a page of users matching provided filter and total count
 	ListUsers(ctx context.Context, filter UserListFilter, page, limit int) ([]*domain.User, int, error)
+	DeleteUser(ctx context.Context, userID int) error
 }
 
 // UserListFilter defines filter options for listing users

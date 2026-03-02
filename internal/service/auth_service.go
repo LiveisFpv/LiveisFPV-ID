@@ -147,6 +147,11 @@ func (a *authService) CreateUser(ctx context.Context, user *domain.User) (*domai
 
 	if err != nil {
 		a.logger.WithError(err).Errorf("failed to send email confirmation: user_id=%d email=%s", userID, user.Email)
+		d_err := a.userRepository.DeleteUser(ctx, userID)
+		if d_err != nil {
+			return nil, fmt.Errorf("%w, failed to delete user", err)
+		}
+		return nil, err
 	}
 	return user, nil
 }
